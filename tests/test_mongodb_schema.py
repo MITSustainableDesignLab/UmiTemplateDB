@@ -1,28 +1,99 @@
+import shapely.geometry
 from mongoengine import *
+import geopandas as gpd
 from schema.mongodb_schema import *
 import pytest
+import json
+import geojson
 
 
 @pytest.fixture
 def db():
-    connect("templatelibrary", host="mongomock://localhost")
+    # connect("templatelibrary", host="mongomock://localhost")
+    connect("templatelibrary")
     yield
     disconnect()
 
 
-def test_add_building(bldg, window, struct, core):
-    a_bldg = BuildingTemplate.objects().first()
+def test_save_and_retrieve_building(bldg, window, struct, core):
+    # To filter by an attrubute of MetaData, use double underscore
+    """
+    Args:
+        bldg:
+        window:
+        struct:
+        core:
+    """
+    a_bldg = BuildingTemplate.objects(MetaData__Country="FR").first()
     assert a_bldg.Name == bldg.Name
 
 
+@pytest.mark.xfail(
+    condition=pytest.raises(NotImplementedError),
+    reason="Not Implemented with Mongomock yet",
+)
+def test_filter_by_geo(bldg):
+    """Shows how to filter database by geolocation.
+
+    Hint:
+        This is the logic: [building if <building.Polygon intersects pt> for
+        building in BuildingTemplates]
+
+        We would create the geoquery this way: First create a geojson-like dict
+        using :meth:`shapely.geometry.mapping`. Then pass this pt to the
+        `MetaData__Polygon__geo_intersects` attribute. MetaData is the first
+        Attribute. Polygon is the attribute of MetaData and finally,
+        `geo_intersects` is the embedded MongoDB function for the `intersects`
+        predicate. See `MongoEngine geo-queries`_ for more details.
+
+    Args:
+        bldg:
+
+    .. _MongoEngine geo-queries:
+        http://docs.mongoengine.org/guide/querying.html?highlight=geo_within#geo-queries
+    """
+    from shapely.geometry import Point
+
+    # First, a sanity check. We build a pt and use
+    # the :meth:`intersects` method.
+    pt = Point(42.370145, -71.112077)
+    polygon = json.dumps(bldg.MetaData.Polygon)
+    # Convert to geojson.geometry.Polygon
+    g1 = geojson.loads(polygon)
+    g2 = shapely.geometry.shape(g1)
+    # Check if intersection is True
+    assert pt.intersects(g2)
+
+    # Second, the actual filter with point pt
+    ptj = shapely.geometry.mapping(pt)
+    a_bldg = BuildingTemplate.objects(MetaData__Polygon__geo_intersects=ptj).first()
+    assert a_bldg
+
+
 def test_to_json(bldg):
+    """
+    Args:
+        bldg:
+    """
     print(bldg.to_json())
 
 
 @pytest.fixture()
 def bldg(db, core, struct, window):
+    """
+    Args:
+        db:
+        core:
+        struct:
+        window:
+    """
     return BuildingTemplate(
-        Name="Building One", Core=core, Perimeter=core, Structure=struct, Windows=window
+        Name="Building One",
+        Core=core,
+        Perimeter=core,
+        Structure=struct,
+        Windows=window,
+        MetaData=MetaData(Author="Samuel Letellier-Duchesne", Country="FR"),
     ).save()
 
 
@@ -60,11 +131,19 @@ def days():
 
 @pytest.fixture()
 def weekschd(days):
+    """
+    Args:
+        days:
+    """
     return WeekSchedule(Days=[days]).save()
 
 
 @pytest.fixture()
 def ys_part(weekschd):
+    """
+    Args:
+        weekschd:
+    """
     return YearSchedulePart(
         FromDay=0, FromMonth=0, ToDay=31, ToMonth=12, Schedule=weekschd
     )
@@ -72,11 +151,19 @@ def ys_part(weekschd):
 
 @pytest.fixture()
 def alwaysOn(ys_part):
+    """
+    Args:
+        ys_part:
+    """
     return YearSchedule(Name="AlwaysOn", Parts=[ys_part]).save()
 
 
 @pytest.fixture()
 def cond(alwaysOn):
+    """
+    Args:
+        alwaysOn:
+    """
     return ZoneConditioning(
         **{
             "CoolingSchedule": alwaysOn,
@@ -98,16 +185,28 @@ def glazingmaterial():
 
 @pytest.fixture()
 def materiallayer(opaquematerial):
+    """
+    Args:
+        opaquematerial:
+    """
     return MaterialLayer(Material=opaquematerial, Thickness=0.15)
 
 
 @pytest.fixture()
 def construction(materiallayer):
+    """
+    Args:
+        materiallayer:
+    """
     return OpaqueConstruction(Name="A Construction", Layers=[materiallayer]).save()
 
 
 @pytest.fixture()
 def windowlayer(glazingmaterial):
+    """
+    Args:
+        glazingmaterial:
+    """
     return MaterialLayer(Material=glazingmaterial, Thickness=0.01)
 
 
@@ -118,11 +217,20 @@ def air():
 
 @pytest.fixture()
 def airlayer(air):
+    """
+    Args:
+        air:
+    """
     return MaterialLayer(Material=air, Thickness=0.01)
 
 
 @pytest.fixture()
 def windowconstruction(windowlayer, airlayer):
+    """
+    Args:
+        windowlayer:
+        airlayer:
+    """
     return WindowConstruction(
         Name="A Window Construction", Layers=[windowlayer, airlayer, windowlayer]
     ).save()
@@ -130,11 +238,19 @@ def windowconstruction(windowlayer, airlayer):
 
 @pytest.fixture()
 def dhw(alwaysOn):
+    """
+    Args:
+        alwaysOn:
+    """
     return DomesticHotWaterSetting(WaterSchedule=alwaysOn).save()
 
 
 @pytest.fixture()
 def conset(construction):
+    """
+    Args:
+        construction:
+    """
     return ZoneConstructionSet(
         **{
             "Facade": construction,
@@ -153,6 +269,10 @@ def intmass():
 
 @pytest.fixture()
 def loads(alwaysOn):
+    """
+    Args:
+        alwaysOn:
+    """
     return ZoneLoad(
         **{
             "EquipmentAvailabilitySchedule": alwaysOn,
@@ -164,6 +284,10 @@ def loads(alwaysOn):
 
 @pytest.fixture()
 def vent(alwaysOn):
+    """
+    Args:
+        alwaysOn:
+    """
     return VentilationSetting(
         **{"NatVentSchedule": alwaysOn, "ScheduledVentilationSchedule": alwaysOn}
     ).save()
@@ -171,6 +295,15 @@ def vent(alwaysOn):
 
 @pytest.fixture()
 def core(cond, conset, dhw, intmass, loads, vent):
+    """
+    Args:
+        cond:
+        conset:
+        dhw:
+        intmass:
+        loads:
+        vent:
+    """
     return ZoneDefinition(
         Name="Core Zone",
         **{
@@ -186,16 +319,29 @@ def core(cond, conset, dhw, intmass, loads, vent):
 
 @pytest.fixture()
 def massratio(opaquematerial):
+    """
+    Args:
+        opaquematerial:
+    """
     return MassRatio(Material=opaquematerial)
 
 
 @pytest.fixture()
 def struct(massratio):
+    """
+    Args:
+        massratio:
+    """
     return StructureInformation(MassRatio=[massratio]).save()
 
 
 @pytest.fixture()
 def window(alwaysOn, windowconstruction):
+    """
+    Args:
+        alwaysOn:
+        windowconstruction:
+    """
     return WindowSettings(
         **{
             "AfnWindowAvailability": alwaysOn,
@@ -208,4 +354,8 @@ def window(alwaysOn, windowconstruction):
 
 def test_building_template(db):
 
+    """
+    Args:
+        db:
+    """
     assert BuildingTemplate.objects
