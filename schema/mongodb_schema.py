@@ -284,6 +284,13 @@ class WindowSettings(UmiBase):
     ZoneMixingFlowRate = FloatField(default=0.001)
 
 
+# A Bounding box for the whole world. Used as the default Polygon for BuildingTemplates.
+world_poly = {
+    "type": "Polygon",
+    "coordinates": [[[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90],]],
+}
+
+
 class MetaData(EmbeddedDocument):
     """archetype template attributes
 
@@ -300,22 +307,25 @@ class MetaData(EmbeddedDocument):
     Author = StringField(required=True)
     DateCreated = DateTimeField(default=datetime.utcnow, required=True)
     DateModified = DateTimeField(default=datetime.utcnow)
-    Image = ImageField()
+    # Image = ImageField()
 
     Country = StringField(choices=[country.alpha_2 for country in pycountry.countries])
-    YearFrom = StringField(help_text="Starting year for the reange this template "
-                                     "applies to")
+    YearFrom = StringField(
+        help_text="Starting year for the range this template applies to"
+    )
     YearTo = StringField(help_text="End year ")
-
+    Polygon = PolygonField(default=world_poly)
     Description = StringField(help_text="")
 
 
 class BuildingTemplate(UmiBase):
+    """Top most object in Umi Template Structure"""
+
     Core = ReferenceField(ZoneDefinition, required=True)
-    Lifespan = IntField()
-    PartitionRatio = FloatField()
+    Lifespan = IntField(default=60)
+    PartitionRatio = FloatField(default=0)
     Perimeter = ReferenceField(ZoneDefinition, required=True)
     Structure = ReferenceField(StructureInformation, required=True)
     Windows = ReferenceField(WindowSettings, required=True)
     DefaultWindowToWallRatio = FloatField(default=0.4, min_value=0, max_value=1)
-    MetaData = EmbeddedDocumentField(MetaData)
+    MetaData = EmbeddedDocumentField(MetaData, required=True)
