@@ -1,3 +1,6 @@
+from datetime import datetime
+
+import pycountry
 from mongoengine import *
 
 
@@ -68,7 +71,7 @@ class OpaqueMaterial(Material):
             "Rough",
             "MediumRough",
             "MediumSmooth",
-            "Smooth" "VerySmooth",
+            "Smooth VerySmooth",
         ],
     )
 
@@ -126,7 +129,7 @@ class MassRatio(EmbeddedDocument):
 
 
 class StructureInformation(ConstructionBase):
-    MassRatio = ListField(EmbeddedDocumentField(MassRatio), required=True)
+    MassRatio = EmbeddedDocumentListField(MassRatio, required=True)
 
 
 class DaySchedule(UmiBase):
@@ -281,6 +284,32 @@ class WindowSettings(UmiBase):
     ZoneMixingFlowRate = FloatField(default=0.001)
 
 
+class MetaData(EmbeddedDocument):
+    """archetype template attributes
+
+    Attributes:
+        Author: (StringField):
+        DateCreated (DateTimeField):
+        DateModified (DateTimeField):
+        Image (ImageField):
+        Country (StringField):
+        Description (StringField):
+
+    """
+
+    Author = StringField(required=True)
+    DateCreated = DateTimeField(default=datetime.utcnow, required=True)
+    DateModified = DateTimeField(default=datetime.utcnow)
+    Image = ImageField()
+
+    Country = StringField(choices=[country.alpha_2 for country in pycountry.countries])
+    YearFrom = StringField(help_text="Starting year for the reange this template "
+                                     "applies to")
+    YearTo = StringField(help_text="End year ")
+
+    Description = StringField(help_text="")
+
+
 class BuildingTemplate(UmiBase):
     Core = ReferenceField(ZoneDefinition, required=True)
     Lifespan = IntField()
@@ -289,3 +318,4 @@ class BuildingTemplate(UmiBase):
     Structure = ReferenceField(StructureInformation, required=True)
     Windows = ReferenceField(WindowSettings, required=True)
     DefaultWindowToWallRatio = FloatField(default=0.4, min_value=0, max_value=1)
+    MetaData = EmbeddedDocumentField(MetaData)
