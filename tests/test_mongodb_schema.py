@@ -359,7 +359,7 @@ def window(alwaysOn, windowconstruction):
         alwaysOn:
         windowconstruction:
     """
-    return WindowSettings(
+    return WindowSetting(
         **{
             "AfnWindowAvailability": alwaysOn,
             "Construction": windowconstruction,
