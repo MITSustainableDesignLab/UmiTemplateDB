@@ -265,7 +265,7 @@ class ZoneDefinition(UmiBase):
     Ventilation = ReferenceField(VentilationSetting, required=True)
 
 
-class WindowSettings(UmiBase):
+class WindowSetting(UmiBase):
     AfnDischargeC = FloatField(default=0.65, min_value=0, max_value=1)
     AfnTempSetpoint = FloatField(default=20)
     AfnWindowAvailability = ReferenceField(YearSchedule, required=True)
@@ -326,6 +326,6 @@ class BuildingTemplate(UmiBase):
     PartitionRatio = FloatField(default=0)
     Perimeter = ReferenceField(ZoneDefinition, required=True)
     Structure = ReferenceField(StructureInformation, required=True)
-    Windows = ReferenceField(WindowSettings, required=True)
+    Windows = ReferenceField(WindowSetting, required=True)
     DefaultWindowToWallRatio = FloatField(default=0.4, min_value=0, max_value=1)
     MetaData = EmbeddedDocumentField(MetaData, required=True)
