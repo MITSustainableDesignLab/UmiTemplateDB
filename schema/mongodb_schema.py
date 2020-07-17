@@ -85,8 +85,7 @@ def minimum_thickness(x):
 
 class MaterialLayer(EmbeddedDocument):
     Material = ReferenceField(Material, required=True)
-
-    Thickness = FloatField(validation=minimum_thickness,)
+    Thickness = FloatField(validation=minimum_thickness, required=True)
 
     meta = {"allow_inheritance": True}
 

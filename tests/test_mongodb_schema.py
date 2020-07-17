@@ -1,6 +1,8 @@
 import shapely.geometry
 from mongoengine import *
 import geopandas as gpd
+
+import schema
 from schema.mongodb_schema import *
 import pytest
 import json
@@ -70,10 +72,18 @@ def test_filter_by_geo(bldg):
     assert a_bldg
 
 
-def test_import_library():
+def test_import_library(db):
     from archetypal import UmiTemplateLibrary
     lib = UmiTemplateLibrary.read_file(
         "tests/test_templates/BostonTemplateLibrary.json")
+    db_objs = {}
+    for component_group in lib.__dict__.values():
+        if isinstance(component_group, list):
+            for component in component_group:
+                class_ = getattr(schema.mongodb_schema, type(component).__name__)
+                db_objs[component.id] = class_()
+
+
     assert lib
 
 
