@@ -9,8 +9,8 @@ import geojson
 
 @pytest.fixture
 def db():
-    # connect("templatelibrary", host="mongomock://localhost")
-    connect("templatelibrary")
+    connect("templatelibrary", host="mongomock://localhost")
+    # connect("templatelibrary")
     yield
     disconnect()
 
@@ -68,6 +68,13 @@ def test_filter_by_geo(bldg):
     ptj = shapely.geometry.mapping(pt)
     a_bldg = BuildingTemplate.objects(MetaData__Polygon__geo_intersects=ptj).first()
     assert a_bldg
+
+
+def test_import_library():
+    from archetypal import UmiTemplateLibrary
+    lib = UmiTemplateLibrary.read_file(
+        "tests/test_templates/BostonTemplateLibrary.json")
+    assert lib
 
 
 def test_to_json(bldg):
