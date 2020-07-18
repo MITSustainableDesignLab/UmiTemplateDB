@@ -3,29 +3,64 @@ from datetime import datetime
 from pymongo import MongoClient
 from mongoengine import *
 
+import schema
+import archetypal
 
-def import_umitemplate(path, client, db):
+
+def import_umitemplate(path):
     """Imports an UMI Template File to a mongodb client"""
-    pass
+    from archetypal import UmiTemplateLibrary
+
+    # first, load the umitemplatelibrary
+    lib = UmiTemplateLibrary.read_file(path)
 
 
-class MetaData:
-    def __init__(
-        self, date_created, date_modified, author, description, archetype_type
-    ):
-        """
+    db_objs = {}  # dbobjects container
 
-        Args:
-            date_created:
-            date_modified:
-            author:
-            description:
-            archetype_type (str): "reference" or "prototype". New constructions
-                should be based on "prototype" buildings (according to code).
-        """
-        self.date_created = datetime(date_created)
-        self.date_modified = date_modified
-        self.author = author
-        self.description = description
+    # Loop over building templates
+    for bldgtemplate in lib.__dict__["BuildingTemplates"]:
 
-        self.archetype_type = archetype_type
+        def recursive(umibase):
+            """recursively create db objects from UmiBase objects. Start with
+            BuildingTemplates."""
+            instance_attr = {}
+            class_ = getattr(schema.mongodb_schema, type(umibase).__name__)
+            for key, value in umibase.mapping().items():
+                if isinstance(
+                    value,
+                    (
+                        archetypal.template.UmiBase,
+                        archetypal.template.schedule.YearSchedulePart,
+                    ),
+                ):
+                    instance_attr[key] = recursive(value)
+                elif isinstance(value, list):
+                    instance_attr[key] = []
+                    for value in value:
+                        if isinstance(
+                            value,
+                            (
+                                archetypal.template.UmiBase,
+                                archetypal.template.schedule.YearSchedulePart,
+                                archetypal.template.MaterialLayer,
+                                archetypal.template.MassRatio,
+                            ),
+                        ):
+                            instance_attr[key].append(recursive(value))
+                        else:
+                            instance_attr[key].append(value)
+                elif isinstance(value, (str, int, float)):
+                    instance_attr[key] = value
+            class_instance = class_(**instance_attr)
+            try:
+                class_instance.save()
+            except AttributeError:
+                # Pass .save() on EmbeddedDocuments
+                pass
+            except ValidationError:
+                pass
+            db_objs[id(umibase)] = class_instance
+            return class_instance
+
+        # loop starts here
+        recursive(bldgtemplate)

@@ -15,9 +15,9 @@ class UmiBase(Document):
 
     """
 
-    Comment = StringField()
+    Comments = StringField()
     DataSource = StringField()
-    Name = StringField()
+    Name = StringField(primary_key=True)
     Category = StringField()
 
     meta = {"allow_inheritance": True}
@@ -78,9 +78,7 @@ class OpaqueMaterial(Material):
 
 def minimum_thickness(x):
     if x <= 0.003:
-        raise ValidationError(
-            "Modeling layers thinner (less) than 0.003 m is not recommended"
-        )
+        print("Modeling layers thinner (less) than 0.003 m is not recommended")
 
 
 class MaterialLayer(EmbeddedDocument):
@@ -118,8 +116,9 @@ class OpaqueConstruction(ConstructionBase):
 
 
 class WindowConstruction(ConstructionBase):
-    Layers = EmbeddedDocumentListField(MaterialLayer, required=True)
+    Layers = EmbeddedDocumentListField(MaterialLayer)
 
+    meta = {"allow_inheritance": True}
 
 class MassRatio(EmbeddedDocument):
     HighLoadRatio = FloatField(default=0.0)
@@ -128,7 +127,7 @@ class MassRatio(EmbeddedDocument):
 
 
 class StructureInformation(ConstructionBase):
-    MassRatio = EmbeddedDocumentListField(MassRatio, required=True)
+    MassRatios = EmbeddedDocumentListField(MassRatio, required=True)
 
 
 class DaySchedule(UmiBase):
@@ -140,7 +139,7 @@ class DaySchedule(UmiBase):
 
 
 class WeekSchedule(UmiBase):
-    Category = StringField(choises=["Week"])
+    Category = StringField()
     Days = ListField(ReferenceField(DaySchedule), required=True)
     Type = StringField(default="Fraction")
 
@@ -188,31 +187,15 @@ class ZoneConditioning(UmiBase):
     CoolingSchedule = ReferenceField(YearSchedule, required=True)
     CoolingCoeffOfPerf = FloatField()
     CoolingSetpoint = FloatField(default=26)
-    CoolingLimitType = StringField(
-        choices=[
-            "NoLimit",
-            "LimitFlowRate",
-            "LimitCapacity",
-            "LimitFlowRateAndCapacity",
-        ]
-    )
-    EconomizerType = StringField(
-        choices=["NoEconomizer", "DifferentialDryBulb", "DifferentialEnthalpy"]
-    )
+    CoolingLimitType = IntField()
+    EconomizerType = IntField()
     HeatingCoeffOfPerf = FloatField()
-    HeatingLimitType = StringField(
-        choices=[
-            "NoLimit",
-            "LimitFlowRate",
-            "LimitCapacity",
-            "LimitFlowRateAndCapacity",
-        ]
-    )
+    HeatingLimitType = IntField()
     HeatingSchedule = ReferenceField(YearSchedule, required=True)
     HeatingSetpoint = FloatField(default=20)
     HeatRecoveryEfficiencyLatent = FloatField(min_value=0, max_value=1, default=0.65)
     HeatRecoveryEfficiencySensible = FloatField(min_value=0, max_value=1, default=0.7)
-    HeatRecoveryType = StringField(choices=[None, "Enthalpy", "Sensible"])
+    HeatRecoveryType = IntField()
     IsCoolingOn = BooleanField(default=True)
     IsHeatingOn = BooleanField(default=True)
     IsMechVentOn = BooleanField(default=True)
@@ -239,7 +222,7 @@ class ZoneConstructionSet(UmiBase):
 
 
 class ZoneLoad(UmiBase):
-    DimmingType = StringField(choices=["Continuous", "Off", "Stepped"])
+    DimmingType = IntField()
     EquipmentAvailabilitySchedule = ReferenceField(YearSchedule, required=True)
     EquipmentPowerDensity = FloatField(default=12)
     IlluminanceTarget = FloatField(default=500)
@@ -286,7 +269,7 @@ class WindowSetting(UmiBase):
 # A Bounding box for the whole world. Used as the default Polygon for BuildingTemplates.
 world_poly = {
     "type": "Polygon",
-    "coordinates": [[[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90],]],
+    "coordinates": [[[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]]],
 }
 
 

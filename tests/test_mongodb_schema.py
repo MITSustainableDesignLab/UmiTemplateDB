@@ -1,8 +1,10 @@
+import archetypal
 import shapely.geometry
 from mongoengine import *
 import geopandas as gpd
 
 import schema
+from dbimport.core import import_umitemplate
 from schema.mongodb_schema import *
 import pytest
 import json
@@ -11,10 +13,14 @@ import geojson
 
 @pytest.fixture
 def db():
-    connect("templatelibrary", host="mongomock://localhost")
-    # connect("templatelibrary")
+    # connect("templatelibrary", host="mongomock://localhost")
+    connect("templatelibrary")
     yield
     disconnect()
+
+
+def test_retreive(db):
+    assert BuildingTemplate.objects()
 
 
 def test_save_and_retrieve_building(bldg, window, struct, core):
@@ -74,8 +80,10 @@ def test_filter_by_geo(bldg):
 
 def test_import_library(db):
     from archetypal import UmiTemplateLibrary
+
     lib = UmiTemplateLibrary.read_file(
-        "tests/test_templates/BostonTemplateLibrary.json")
+        "tests/test_templates/BostonTemplateLibrary.json"
+    )
     db_objs = {}
     for component_group in lib.__dict__.values():
         if isinstance(component_group, list):
@@ -83,8 +91,22 @@ def test_import_library(db):
                 class_ = getattr(schema.mongodb_schema, type(component).__name__)
                 db_objs[component.id] = class_()
 
-
+    assert db_objs
     assert lib
+
+
+@pytest.fixture()
+def imported(db):
+    path="tests/test_templates/BostonTemplateLibrary.json"
+    import_umitemplate(path)
+
+
+def test_import_library_(db, imported):
+    """Try using recursive"""
+    for bldg in BuildingTemplate.objects():
+        print(f"downloaded {bldg}")
+        assert bldg
+
 
 
 def test_to_json(bldg):
