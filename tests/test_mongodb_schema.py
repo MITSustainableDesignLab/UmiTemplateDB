@@ -78,30 +78,13 @@ def test_filter_by_geo(bldg):
     assert a_bldg
 
 
-def test_import_library(db):
-    from archetypal import UmiTemplateLibrary
-
-    lib = UmiTemplateLibrary.read_file(
-        "tests/test_templates/BostonTemplateLibrary.json"
-    )
-    db_objs = {}
-    for component_group in lib.__dict__.values():
-        if isinstance(component_group, list):
-            for component in component_group:
-                class_ = getattr(schema.mongodb_schema, type(component).__name__)
-                db_objs[component.id] = class_()
-
-    assert db_objs
-    assert lib
-
-
 @pytest.fixture()
 def imported(db):
     path = "tests/test_templates/BostonTemplateLibrary.json"
     import_umitemplate(path, Author="Carlos Cerezo", Country="US")
 
 
-def test_import_library_(db, imported):
+def test_import_library(db, imported):
     """Try using recursive"""
     for bldg in BuildingTemplate.objects():
         print(f"downloaded {bldg}")
