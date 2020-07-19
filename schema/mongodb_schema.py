@@ -2,6 +2,12 @@ from datetime import datetime
 
 import pycountry
 from mongoengine import *
+from mongoengine import signals
+
+
+class PrimaryKey(EmbeddedDocument):
+    _name = StringField(required=True)
+    _class = StringField(required=True)
 
 
 class UmiBase(Document):
@@ -15,9 +21,10 @@ class UmiBase(Document):
 
     """
 
+    key = EmbeddedDocumentField(PrimaryKey, primary_key=True)
     Comments = StringField()
     DataSource = StringField()
-    Name = StringField(primary_key=True)
+    Name = StringField()
     Category = StringField()
 
     meta = {"allow_inheritance": True}
@@ -84,6 +91,7 @@ def minimum_thickness(x):
 class MaterialLayer(EmbeddedDocument):
     Material = ReferenceField(Material, required=True)
     Thickness = FloatField(validation=minimum_thickness, required=True)
+    key = EmbeddedDocumentField(PrimaryKey)
 
     meta = {"allow_inheritance": True}
 
@@ -118,12 +126,14 @@ class OpaqueConstruction(ConstructionBase):
 class WindowConstruction(ConstructionBase):
     Layers = EmbeddedDocumentListField(MaterialLayer)
 
-    meta = {"allow_inheritance": True}
 
 class MassRatio(EmbeddedDocument):
     HighLoadRatio = FloatField(default=0.0)
     Material = ReferenceField(OpaqueMaterial, required=True)
     NormalRatio = FloatField(default=0.0)
+    key = EmbeddedDocumentField(PrimaryKey)
+
+    meta = {"allow_inheritance": True}
 
 
 class StructureInformation(ConstructionBase):
@@ -131,7 +141,6 @@ class StructureInformation(ConstructionBase):
 
 
 class DaySchedule(UmiBase):
-    Category = StringField(choices=["Day"], default="Day")
     Type = StringField(default="Fraction")
     Values = ListField(
         FloatField(min_value=0, max_value=1), required=True, max_length=24
@@ -139,7 +148,6 @@ class DaySchedule(UmiBase):
 
 
 class WeekSchedule(UmiBase):
-    Category = StringField()
     Days = ListField(ReferenceField(DaySchedule), required=True)
     Type = StringField(default="Fraction")
 
@@ -150,6 +158,9 @@ class YearSchedulePart(EmbeddedDocument):
     ToDay = IntField()
     ToMonth = IntField()
     Schedule = ReferenceField(WeekSchedule, required=True)
+    key = EmbeddedDocumentField(PrimaryKey)
+
+    meta = {"allow_inheritance": True}
 
 
 class YearSchedule(UmiBase):
@@ -259,8 +270,8 @@ class WindowSetting(UmiBase):
     ShadingSystemAvailabilitySchedule = ReferenceField(YearSchedule, required=True)
     ShadingSystemSetpoint = FloatField(default=180)
     ShadingSystemTransmittance = FloatField(default=0.5)
-    ShadingSystemType = StringField(choices=["ExteriorShade", "InteriorShade"])
-    Type = StringField(choices=["External", "Internal"], default="External")
+    ShadingSystemType = IntField()
+    Type = IntField(default=0)
     ZoneMixingAvailabilitySchedule = ReferenceField(YearSchedule, required=True)
     ZoneMixingDeltaTemperature = FloatField(default=2.0)
     ZoneMixingFlowRate = FloatField(default=0.001)
@@ -271,6 +282,10 @@ world_poly = {
     "type": "Polygon",
     "coordinates": [[[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]]],
 }
+
+
+def update_modified(sender, document):
+    document.DateModified = datetime.utcnow()
 
 
 class MetaData(EmbeddedDocument):
@@ -298,6 +313,10 @@ class MetaData(EmbeddedDocument):
     YearTo = StringField(help_text="End year ")
     Polygon = PolygonField(default=world_poly)
     Description = StringField(help_text="")
+
+    meta = {"allow_inheritance": True}
+
+    signals.pre_save.connect(update_modified)
 
 
 class BuildingTemplate(UmiBase):

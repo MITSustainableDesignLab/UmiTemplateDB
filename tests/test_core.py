@@ -88,7 +88,6 @@ class TestImports:
 
         assert db.list_documents(DOCUMENT)
 
-
     def test_import_library(self, db):
         import archetypal as ar
         from bson.json_util import loads
@@ -141,7 +140,9 @@ class TestImports:
                         post_id = collection.insert(db_dict)
                         print(f"inserted {post_id}")
                     except DuplicateKeyError:
-                        collection.replace_one({"_id": db_dict["_id"]}, db_dict, upsert=True)
+                        collection.replace_one(
+                            {"_id": db_dict["_id"]}, db_dict, upsert=True
+                        )
                     except AttributeError as e:
                         raise e
                     except Exception as e:

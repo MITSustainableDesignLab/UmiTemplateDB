@@ -13,8 +13,8 @@ import geojson
 
 @pytest.fixture
 def db():
-    # connect("templatelibrary", host="mongomock://localhost")
-    connect("templatelibrary")
+    connect("templatelibrary", host="mongomock://localhost")
+    # connect("templatelibrary")
     yield
     disconnect()
 
@@ -24,7 +24,7 @@ def test_retreive(db):
 
 
 def test_save_and_retrieve_building(bldg, window, struct, core):
-    # To filter by an attrubute of MetaData, use double underscore
+    # To filter by an attribute of MetaData, use double underscore
     """
     Args:
         bldg:
@@ -97,8 +97,8 @@ def test_import_library(db):
 
 @pytest.fixture()
 def imported(db):
-    path="tests/test_templates/BostonTemplateLibrary.json"
-    import_umitemplate(path)
+    path = "tests/test_templates/BostonTemplateLibrary.json"
+    import_umitemplate(path, Author="Carlos Cerezo", Country="US")
 
 
 def test_import_library_(db, imported):
@@ -106,7 +106,6 @@ def test_import_library_(db, imported):
     for bldg in BuildingTemplate.objects():
         print(f"downloaded {bldg}")
         assert bldg
-
 
 
 def test_to_json(bldg):
@@ -352,7 +351,7 @@ def core(cond, conset, dhw, intmass, loads, vent):
             "InternalMassConstruction": intmass,
             "Loads": loads,
             "Ventilation": vent,
-        }
+        },
     ).save()
 
 
