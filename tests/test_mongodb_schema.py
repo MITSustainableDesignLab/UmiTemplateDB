@@ -1,20 +1,17 @@
-import archetypal
-import shapely.geometry
-from mongoengine import *
-import geopandas as gpd
-
-import schema
-from dbimport.core import import_umitemplate
-from schema.mongodb_schema import *
-import pytest
 import json
+
 import geojson
+import pytest
+import shapely.geometry
+
+from dbimport.core import import_umitemplate, serialize
+from schema.mongodb_schema import *
 
 
 @pytest.fixture
 def db():
-    connect("templatelibrary", host="mongomock://localhost")
-    # connect("templatelibrary")
+    # connect("templatelibrary", host="mongomock://localhost")
+    connect("templatelibrary")
     yield
     disconnect()
 
@@ -89,6 +86,10 @@ def test_import_library(db, imported):
     for bldg in BuildingTemplate.objects():
         print(f"downloaded {bldg}")
         assert bldg
+
+
+def test_db_to_json(imported):
+    serialize()
 
 
 def test_to_json(bldg):

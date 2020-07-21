@@ -1,31 +1,110 @@
+import hashlib
 from datetime import datetime
 
 import pycountry
+from bson import DBRef as BaseDBRef
 from mongoengine import *
 from mongoengine import signals
 
 
-class PrimaryKey(EmbeddedDocument):
-    _name = StringField(required=True)
-    _class = StringField(required=True)
+class ReferenceField(ReferenceField):
+    def to_mongo(self, document):
+        if isinstance(document, DBRef):
+            if not self.dbref:
+                return document.id
+            return document
+
+        if isinstance(document, Document):
+            # We need the id from the saved object to create the DBRef
+            id_ = document.pk
+
+            # XXX ValidationError raised outside of the "validate" method.
+            if id_ is None:
+                self.error(
+                    "You can only reference documents once they have"
+                    " been saved to the database"
+                )
+
+            # Use the attributes from the document instance, so that they
+            # override the attributes of this field's document type
+            cls = document
+        else:
+            id_ = document
+            cls = self.document_type
+
+        id_field_name = cls._meta["id_field"]
+        id_field = cls._fields[id_field_name]
+
+        id_ = id_field.to_mongo(id_)
+        if self.document_type._meta.get("abstract"):
+            collection = cls._get_collection_name()
+            return DBRef(collection, id_, cls=cls._class_name)
+        elif self.dbref:
+            collection = cls._get_collection_name()
+            return DBRef(collection, id_)
+
+        return id_
+
+    def to_python(self, value):
+        """Convert a MongoDB-compatible type to a Python type."""
+        if not self.dbref and not isinstance(
+            value, (DBRef, Document, EmbeddedDocument)
+        ):
+            collection = self.document_type._get_collection_name()
+            value = DBRef(collection, self.document_type.id.to_python(value))
+        return value
+
+
+class PrimaryKey(DictField):
+    def __init__(self, field=None, *args, **kwargs):
+        super().__init__(field=field, *args, **kwargs)
+
+    # def to_mongo(self, value, use_db_field=True, fields=None):
+    #     if isinstance(value, dict):
+    #         return hash(value.values())
+    #     else:
+    #         return super(PrimaryKey, self).to_mongo(value, use_db_field=True, fields=None)
+
+
+class DBRef(BaseDBRef):
+    """Overrides the id property to have the {$ref: value} format"""
+
+    @property
+    def id(self):
+        # create hasher
+        hasher = hashlib.md5()
+        hasher.update(self.__id.__str__().encode("utf-8"))  # Hashing the dict
+        return {"$ref": hasher.hexdigest()}
+
+
+class Document(Document):
+    def to_dbref(self):
+        """Returns an instance of :class:`~bson.dbref.DBRef` useful in
+        `__raw__` queries."""
+        if self.pk is None:
+            msg = "Only saved documents can have a valid dbref"
+            raise OperationError(msg)
+        return DBRef(self.__class__._get_collection_name(), self.pk)
+
+    meta = {"abstract": True}
 
 
 class UmiBase(Document):
     """The Base class of all Umi objects.
 
     Attributes:
-        Comment (StringField): Human readable string describing the exception.
+        Comments (StringField): Human readable string describing the exception.
         DataSource (StringField): Error code.
         Name (StringField): The Name of the Component. Required Field
         Category (StringField):
 
     """
 
-    key = EmbeddedDocumentField(PrimaryKey, primary_key=True)
-    Comments = StringField()
-    DataSource = StringField()
-    Name = StringField()
-    Category = StringField()
+    key = PrimaryKey(primary_key=True)
+    Comments = StringField(null=True)
+    DataSource = StringField(null=True)
+    Name = StringField(required=True)
+    Category = StringField(default="Uncategorized")
 
     meta = {"allow_inheritance": True}
 
@@ -91,9 +170,9 @@ def minimum_thickness(x):
 class MaterialLayer(EmbeddedDocument):
     Material = ReferenceField(Material, required=True)
     Thickness = FloatField(validation=minimum_thickness, required=True)
-    key = EmbeddedDocumentField(PrimaryKey)
+    # key = EmbeddedDocumentField(PrimaryKey, primary_key=True)
 
-    meta = {"allow_inheritance": True}
+    meta = {"allow_inheritance": True, "strict": False}
 
 
 class ConstructionBase(UmiBase):
@@ -131,9 +210,9 @@ class MassRatio(EmbeddedDocument):
     HighLoadRatio = FloatField(default=0.0)
     Material = ReferenceField(OpaqueMaterial, required=True)
     NormalRatio = FloatField(default=0.0)
-    key = EmbeddedDocumentField(PrimaryKey)
+    # key = EmbeddedDocumentField(PrimaryKey, primary_key=True)
 
-    meta = {"allow_inheritance": True}
+    meta = {"allow_inheritance": True, "strict": False}
 
 
 class StructureInformation(ConstructionBase):
@@ -158,9 +237,9 @@ class YearSchedulePart(EmbeddedDocument):
     ToDay = IntField()
     ToMonth = IntField()
     Schedule = ReferenceField(WeekSchedule, required=True)
-    key = EmbeddedDocumentField(PrimaryKey)
+    # key = EmbeddedDocumentField(PrimaryKey, primary_key=True)
 
-    meta = {"allow_inheritance": True}
+    meta = {"allow_inheritance": True, "strict": False}
 
 
 class YearSchedule(UmiBase):
@@ -314,7 +393,7 @@ class MetaData(EmbeddedDocument):
     Polygon = PolygonField(default=world_poly)
     Description = StringField(help_text="")
 
-    meta = {"allow_inheritance": True}
+    meta = {"allow_inheritance": True, "strict": False}
 
     signals.pre_save.connect(update_modified)
 

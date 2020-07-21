@@ -3,9 +3,8 @@ import json
 from tempfile import TemporaryFile
 
 import pytest
-from bson import ObjectId
-from pymongo import MongoClient
 from mockupdb import go, MockupDB
+from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
 
 
@@ -90,7 +89,6 @@ class TestImports:
 
     def test_import_library(self, db):
         import archetypal as ar
-        from bson.json_util import loads
 
         def dict_generator(indict, pre=None):
             pre = pre[:] if pre else []
