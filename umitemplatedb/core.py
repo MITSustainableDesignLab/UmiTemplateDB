@@ -5,8 +5,7 @@ import archetypal
 import numpy as np
 from mongoengine import *
 
-import schema
-from schema.mongodb_schema import (
+from umitemplatedb.mongodb_schema import (
     BuildingTemplate,
     MetaData,
     GasMaterial,
@@ -65,7 +64,7 @@ def import_umitemplate(
             """recursively create db objects from UmiBase objects. Start with
             BuildingTemplates."""
             instance_attr = {}
-            class_ = getattr(schema.mongodb_schema, type(umibase).__name__)
+            class_ = getattr(umitemplatedb.mongodb_schema, type(umibase).__name__)
             for key, value in umibase.mapping().items():
                 if isinstance(
                     value,

@@ -4,8 +4,8 @@ import geojson
 import pytest
 import shapely.geometry
 
-from dbimport.core import import_umitemplate, serialize
-from schema.mongodb_schema import *
+from umitemplatedb.core import import_umitemplate, serialize
+from umitemplatedb.mongodb_schema import *
 
 
 @pytest.fixture
