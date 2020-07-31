@@ -1,29 +1,9 @@
-import hashlib
-import json
-
 import archetypal
-import numpy as np
 from mongoengine import *
 
 from umitemplatedb import mongodb_schema
 from umitemplatedb.mongodb_schema import (
     BuildingTemplate,
-    GasMaterial,
-    GlazingMaterial,
-    OpaqueMaterial,
-    OpaqueConstruction,
-    WindowConstruction,
-    StructureInformation,
-    DaySchedule,
-    WeekSchedule,
-    YearSchedule,
-    DomesticHotWaterSetting,
-    VentilationSetting,
-    ZoneConditioning,
-    ZoneConstructionSet,
-    ZoneLoad,
-    ZoneDefinition,
-    WindowSetting,
 )
 
 
@@ -126,89 +106,3 @@ def import_umitemplate(
             Polygon=Polygon,
             Description=Description,
         )
-
-
-class CustomJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.bool_):
-            return bool(obj)
-        if isinstance(obj, QuerySet):
-            return [obj.to_json(cls=CustomJSONEncoder) for obj in obj]
-        return json.JSONEncoder.default(self, obj)
-
-
-class MongoEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, Document):
-            data = o.to_mongo()
-            _class = data.pop("_cls")
-            return data
-        return o.to_json()
-
-
-def serialize():
-    data = {
-        "GasMaterials": [obj.to_json(indent=3) for obj in GasMaterial.objects()],
-        "GlazingMaterials": [
-            obj.to_json(indent=3) for obj in GlazingMaterial.objects()
-        ],
-        "OpaqueMaterials": [obj.to_json(indent=3) for obj in OpaqueMaterial.objects()],
-        "OpaqueConstructions": [
-            obj.to_json(indent=3) for obj in OpaqueConstruction.objects()
-        ],
-        "WindowConstructions": [
-            obj.to_json(indent=3) for obj in WindowConstruction.objects()
-        ],
-        "StructureDefinitions": [
-            obj.to_json(indent=3) for obj in StructureInformation.objects()
-        ],
-        "DaySchedules": [obj.to_json(indent=3) for obj in DaySchedule.objects()],
-        "WeekSchedules": [obj.to_json(indent=3) for obj in WeekSchedule.objects()],
-        "YearSchedules": [obj.to_json(indent=3) for obj in YearSchedule.objects()],
-        "DomesticHotWaterSettings": [
-            obj.to_json(indent=3) for obj in DomesticHotWaterSetting.objects()
-        ],
-        "VentilationSettings": [
-            obj.to_json(indent=3) for obj in VentilationSetting.objects()
-        ],
-        "ZoneConditionings": [
-            obj.to_json(indent=3) for obj in ZoneConditioning.objects()
-        ],
-        "ZoneConstructionSets": [
-            obj.to_json(indent=3) for obj in ZoneConstructionSet.objects()
-        ],
-        "ZoneLoads": [obj.to_json(indent=3) for obj in ZoneLoad.objects()],
-        "Zones": [obj.to_json(indent=3) for obj in ZoneDefinition.objects()],
-        "WindowSettings": [obj.to_json(indent=3) for obj in WindowSetting.objects()],
-        "BuildingTemplates": [
-            obj.to_json(indent=3) for obj in BuildingTemplate.objects().exclude("_cls")
-        ],
-    }
-
-    class CustomJSONEncoder(json.JSONEncoder):
-        def default(self, obj):
-            if isinstance(obj, np.bool_):
-                return bool(obj)
-            return obj
-
-    with open("data.json", "w") as outfile:
-        # create hasher
-        data_dict = {}
-        for name, block in data.items():
-            data_dict[name] = [json.loads(item) for item in block]
-            for component in data_dict[name]:
-                _id = component.pop("_id")  # Gets rid of the _id field
-                _cls = component.pop("_cls")  # Gets rid of the _cls field
-                _name = component["Name"]  # Gets the component Name
-
-                hasher = hashlib.md5()
-                hasher.update(_id.__str__().encode("utf-8"))
-                component["$id"] = hasher.hexdigest()  # re-creates the unique id
-                for key, value in component.items():
-                    if isinstance(value, list):
-                        try:
-                            [value.pop("_cls", None) for value in value]
-                        except AttributeError:
-                            pass
-        response = json.dumps(data_dict, indent=3, cls=CustomJSONEncoder)
-        outfile.write(response)

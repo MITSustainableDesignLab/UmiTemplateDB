@@ -5,16 +5,8 @@ import pytest
 import shapely.geometry
 from archetypal import UmiTemplateLibrary
 
-from umitemplatedb.core import import_umitemplate, serialize
+from umitemplatedb.core import import_umitemplate
 from umitemplatedb.mongodb_schema import *
-
-
-@pytest.fixture(scope="session")
-def db():
-    connect("templatelibrary", host="mongomock://localhost")
-    # connect("templatelibrary")
-    yield
-    disconnect()
 
 
 def test_save_and_retrieve_building(bldg, window, struct, core):
@@ -71,12 +63,6 @@ def test_filter_by_geo(bldg):
     assert a_bldg
 
 
-@pytest.fixture(scope="session")
-def imported(db):
-    path = "tests/test_templates/BostonTemplateLibrary.json"
-    import_umitemplate(path, Author="Carlos Cerezo", Country="US")
-
-
 def test_import_library(db, imported):
     """Try using recursive"""
     for bldg in BuildingTemplate.objects():
@@ -97,8 +83,18 @@ def test_serialize_templatelist(bldg, window, struct, core):
     lib.to_json()
 
 
-def test_db_to_json(imported):
-    serialize()
+@pytest.fixture(scope="session")
+def db():
+    connect("templatelibrary", host="mongomock://localhost")
+    # connect("templatelibrary")
+    yield
+    disconnect()
+
+
+@pytest.fixture(scope="session")
+def imported(db):
+    path = "tests/test_templates/BostonTemplateLibrary.json"
+    import_umitemplate(path, Author="Carlos Cerezo", Country="US")
 
 
 @pytest.fixture()
