@@ -1,10 +1,10 @@
 import hashlib
 from datetime import datetime
 
+import archetypal.template
 import pycountry
 from bson import DBRef as BaseDBRef
 from mongoengine import *
-from mongoengine import signals
 
 
 class ReferenceField(ReferenceField):
@@ -100,10 +100,12 @@ class UmiBase(Document):
 
     """
 
-    key = PrimaryKey(primary_key=True)
+    Name = StringField(required=True)
+    key = PrimaryKey(
+        primary_key=True, default=dict(_name=str(Name), _class=type(Document).__name__)
+    )
     Comments = StringField(null=True)
     DataSource = StringField(null=True)
-    Name = StringField(required=True)
     Category = StringField(default="Uncategorized")
 
     meta = {"allow_inheritance": True}
@@ -226,16 +228,22 @@ class DaySchedule(UmiBase):
     )
 
 
+def min_length(x):
+    """WeekSchedule.Days should have lenght == 7"""
+    if len(x) != 7:
+        raise ValidationError
+
+
 class WeekSchedule(UmiBase):
-    Days = ListField(ReferenceField(DaySchedule), required=True)
+    Days = ListField(ReferenceField(DaySchedule), validation=min_length, required=True)
     Type = StringField(default="Fraction")
 
 
 class YearSchedulePart(EmbeddedDocument):
-    FromDay = IntField()
-    FromMonth = IntField()
-    ToDay = IntField()
-    ToMonth = IntField()
+    FromDay = IntField(min_value=1, max_value=31)
+    FromMonth = IntField(min_value=1, max_value=12)
+    ToDay = IntField(min_value=1, max_value=31)
+    ToMonth = IntField(min_value=1, max_value=12)
     Schedule = ReferenceField(WeekSchedule, required=True)
     # key = EmbeddedDocumentField(PrimaryKey, primary_key=True)
 
@@ -367,37 +375,6 @@ def update_modified(sender, document):
     document.DateModified = datetime.utcnow()
 
 
-class MetaData(EmbeddedDocument):
-    """archetype template attributes
-
-    Attributes:
-        Author: (StringField):
-        DateCreated (DateTimeField):
-        DateModified (DateTimeField):
-        Image (ImageField):
-        Country (StringField):
-        Description (StringField):
-
-    """
-
-    Author = StringField(required=True)
-    DateCreated = DateTimeField(default=datetime.utcnow, required=True)
-    DateModified = DateTimeField(default=datetime.utcnow)
-    # Image = ImageField()
-
-    Country = StringField(choices=[country.alpha_2 for country in pycountry.countries])
-    YearFrom = StringField(
-        help_text="Starting year for the range this template applies to"
-    )
-    YearTo = StringField(help_text="End year ")
-    Polygon = PolygonField(default=world_poly)
-    Description = StringField(help_text="")
-
-    meta = {"allow_inheritance": True, "strict": False}
-
-    signals.pre_save.connect(update_modified)
-
-
 class BuildingTemplate(UmiBase):
     """Top most object in Umi Template Structure"""
 
@@ -408,4 +385,52 @@ class BuildingTemplate(UmiBase):
     Structure = ReferenceField(StructureInformation, required=True)
     Windows = ReferenceField(WindowSetting, required=True)
     DefaultWindowToWallRatio = FloatField(default=0.4, min_value=0, max_value=1)
-    MetaData = EmbeddedDocumentField(MetaData, required=True)
+
+    # MetaData (Not in UMI)
+    Author = StringField(required=True)
+    DateCreated = DateTimeField(default=datetime.utcnow, required=True)
+    DateModified = DateTimeField(default=datetime.utcnow)
+    # Image = ImageField()
+    Country = StringField(
+        choices=tuple((a.alpha_2, a.name) for a in list(pycountry.countries))
+    )
+    YearFrom = StringField(
+        help_text="Starting year for the range this template applies to"
+    )
+    YearTo = StringField(help_text="End year ")
+    ClimateZone = StringField()
+    Polygon = PolygonField(default=world_poly)
+    Description = StringField(help_text="")
+
+    def to_template(self, idf=None):
+        """Converts to an :class:~`archetypal.template.building_template
+        .BuildingTemplate` object"""
+
+        def recursive(document, idf):
+            """recursively create UmiBase objects from Document objects. Start with
+            BuildingTemplates."""
+            instance_attr = {}
+            class_ = getattr(archetypal.template, type(document).__name__)
+            for key in document:
+                if isinstance(document[key], (UmiBase, YearSchedulePart)):
+                    instance_attr[key] = recursive(document[key], idf)
+                elif isinstance(document[key], list):
+                    instance_attr[key] = []
+                    for value in document[key]:
+                        if isinstance(
+                            value, (UmiBase, YearSchedulePart, MaterialLayer, MassRatio)
+                        ):
+                            instance_attr[key].append(recursive(value, idf))
+                        else:
+                            instance_attr[key].append(value)
+                elif isinstance(document[key], (str, int, float)):
+                    instance_attr[key] = document[key]
+            class_instance = class_(**instance_attr, idf=idf)
+            return class_instance
+
+        if idf is None:
+            from archetypal import IDF
+
+            idf = IDF()
+
+        return recursive(self, idf=idf)

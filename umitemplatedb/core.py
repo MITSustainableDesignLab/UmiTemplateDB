@@ -5,9 +5,9 @@ import archetypal
 import numpy as np
 from mongoengine import *
 
+from umitemplatedb import mongodb_schema
 from umitemplatedb.mongodb_schema import (
     BuildingTemplate,
-    MetaData,
     GasMaterial,
     GlazingMaterial,
     OpaqueMaterial,
@@ -64,7 +64,7 @@ def import_umitemplate(
             """recursively create db objects from UmiBase objects. Start with
             BuildingTemplates."""
             instance_attr = {}
-            class_ = getattr(umitemplatedb.mongodb_schema, type(umibase).__name__)
+            class_ = getattr(mongodb_schema, type(umibase).__name__)
             for key, value in umibase.mapping().items():
                 if isinstance(
                     value,
@@ -103,9 +103,18 @@ def import_umitemplate(
                     )
                 )
                 if isinstance(class_instance, BuildingTemplate):
-                    class_instance["MetaData"] = MetaData(**metaattributes)
+                    for key, value in metaattributes.items():
+                        class_instance[key] = value
                 class_instance.save()
                 return class_instance
+
+        if not Polygon:
+            Polygon = {
+                "type": "Polygon",
+                "coordinates": [
+                    [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]]
+                ],
+            }
 
         # loop starts here
         bldg = recursive(
@@ -172,8 +181,7 @@ def serialize():
         "Zones": [obj.to_json(indent=3) for obj in ZoneDefinition.objects()],
         "WindowSettings": [obj.to_json(indent=3) for obj in WindowSetting.objects()],
         "BuildingTemplates": [
-            obj.to_json(indent=3)
-            for obj in BuildingTemplate.objects().exclude("MetaData", "_cls")
+            obj.to_json(indent=3) for obj in BuildingTemplate.objects().exclude("_cls")
         ],
     }
 

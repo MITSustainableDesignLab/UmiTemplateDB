@@ -3,21 +3,18 @@ import json
 import geojson
 import pytest
 import shapely.geometry
+from archetypal import UmiTemplateLibrary
 
 from umitemplatedb.core import import_umitemplate, serialize
 from umitemplatedb.mongodb_schema import *
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def db():
-    # connect("templatelibrary", host="mongomock://localhost")
-    connect("templatelibrary")
+    connect("templatelibrary", host="mongomock://localhost")
+    # connect("templatelibrary")
     yield
     disconnect()
-
-
-def test_retreive(db):
-    assert BuildingTemplate.objects()
 
 
 def test_save_and_retrieve_building(bldg, window, struct, core):
@@ -29,7 +26,7 @@ def test_save_and_retrieve_building(bldg, window, struct, core):
         struct:
         core:
     """
-    a_bldg = BuildingTemplate.objects(MetaData__Country="FR").first()
+    a_bldg = BuildingTemplate.objects(Country="FR").first()
     assert a_bldg.Name == bldg.Name
 
 
@@ -46,8 +43,7 @@ def test_filter_by_geo(bldg):
 
         We would create the geoquery this way: First create a geojson-like dict
         using :meth:`shapely.geometry.mapping`. Then pass this pt to the
-        `MetaData__Polygon__geo_intersects` attribute. MetaData is the first
-        Attribute. Polygon is the attribute of MetaData and finally,
+        `Polygon__geo_intersects` attribute. Polygon is the attribute of MetaData and finally,
         `geo_intersects` is the embedded MongoDB function for the `intersects`
         predicate. See `MongoEngine geo-queries`_ for more details.
 
@@ -62,7 +58,7 @@ def test_filter_by_geo(bldg):
     # First, a sanity check. We build a pt and use
     # the :meth:`intersects` method.
     pt = Point(42.370145, -71.112077)
-    polygon = json.dumps(bldg.MetaData.Polygon)
+    polygon = json.dumps(bldg.Polygon)
     # Convert to geojson.geometry.Polygon
     g1 = geojson.loads(polygon)
     g2 = shapely.geometry.shape(g1)
@@ -71,11 +67,11 @@ def test_filter_by_geo(bldg):
 
     # Second, the actual filter with point pt
     ptj = shapely.geometry.mapping(pt)
-    a_bldg = BuildingTemplate.objects(MetaData__Polygon__geo_intersects=ptj).first()
+    a_bldg = BuildingTemplate.objects(Polygon__geo_intersects=ptj).first()
     assert a_bldg
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def imported(db):
     path = "tests/test_templates/BostonTemplateLibrary.json"
     import_umitemplate(path, Author="Carlos Cerezo", Country="US")
@@ -84,20 +80,25 @@ def imported(db):
 def test_import_library(db, imported):
     """Try using recursive"""
     for bldg in BuildingTemplate.objects():
-        print(f"downloaded {bldg}")
+        print(f"downloaded {bldg.Name}")
         assert bldg
+
+
+def test_serialize_templatelist(bldg, window, struct, core):
+    """From a list of :class:~`umitemplatedb.mongodb_schema.BuildingTemplate`
+    create an :class:~`archetypal.umi_template.UmiTemplateLibrary`"""
+    bldgs = [bldg]
+
+    templates = []
+    for bldg in bldgs:
+        templates.append(bldg.to_template())
+
+    lib = UmiTemplateLibrary(BuildingTemplates=templates)
+    lib.to_json()
 
 
 def test_db_to_json(imported):
     serialize()
-
-
-def test_to_json(bldg):
-    """
-    Args:
-        bldg:
-    """
-    print(bldg.to_json())
 
 
 @pytest.fixture()
@@ -115,12 +116,13 @@ def bldg(db, core, struct, window):
         Perimeter=core,
         Structure=struct,
         Windows=window,
-        MetaData=MetaData(Author="Samuel Letellier-Duchesne", Country="FR"),
+        Author="Samuel Letellier-Duchesne",
+        Country="FR",
     ).save()
 
 
 @pytest.fixture()
-def days():
+def day():
     return DaySchedule(
         Values=[
             1.0,
@@ -147,17 +149,18 @@ def days():
             1.0,
             1.0,
             1.0,
-        ]
+        ],
+        Name="DaySch",
     ).save()
 
 
 @pytest.fixture()
-def weekschd(days):
+def weekschd(day):
     """
     Args:
         days:
     """
-    return WeekSchedule(Days=[days]).save()
+    return WeekSchedule(Days=[day] * 7, Name="WeekSch").save()
 
 
 @pytest.fixture()
@@ -167,7 +170,7 @@ def ys_part(weekschd):
         weekschd:
     """
     return YearSchedulePart(
-        FromDay=0, FromMonth=0, ToDay=31, ToMonth=12, Schedule=weekschd
+        FromDay=1, FromMonth=1, ToDay=31, ToMonth=12, Schedule=weekschd
     )
 
 
@@ -191,18 +194,19 @@ def cond(alwaysOn):
             "CoolingSchedule": alwaysOn,
             "HeatingSchedule": alwaysOn,
             "MechVentSchedule": alwaysOn,
-        }
+        },
+        Name="Zone Conditioning",
     ).save()
 
 
 @pytest.fixture()
 def opaquematerial():
-    return OpaqueMaterial().save()
+    return OpaqueMaterial(Name="OpaqueMaterial").save()
 
 
 @pytest.fixture()
 def glazingmaterial():
-    return GlazingMaterial().save()
+    return GlazingMaterial(Name="GlazingMaterial").save()
 
 
 @pytest.fixture()
@@ -264,7 +268,9 @@ def dhw(alwaysOn):
     Args:
         alwaysOn:
     """
-    return DomesticHotWaterSetting(WaterSchedule=alwaysOn).save()
+    return DomesticHotWaterSetting(
+        WaterSchedule=alwaysOn, Name="DomesticHotWaterSetting"
+    ).save()
 
 
 @pytest.fixture()
@@ -280,13 +286,14 @@ def conset(construction):
             "Partition": construction,
             "Roof": construction,
             "Slab": construction,
-        }
+        },
+        Name="ZoneConstructionSet",
     ).save()
 
 
 @pytest.fixture()
 def intmass():
-    return OpaqueConstruction().save()
+    return OpaqueConstruction(Name="OpaqueConstruction").save()
 
 
 @pytest.fixture()
@@ -300,7 +307,8 @@ def loads(alwaysOn):
             "EquipmentAvailabilitySchedule": alwaysOn,
             "LightsAvailabilitySchedule": alwaysOn,
             "OccupancySchedule": alwaysOn,
-        }
+        },
+        Name="ZoneLoad",
     ).save()
 
 
@@ -311,7 +319,8 @@ def vent(alwaysOn):
         alwaysOn:
     """
     return VentilationSetting(
-        **{"NatVentSchedule": alwaysOn, "ScheduledVentilationSchedule": alwaysOn}
+        **{"NatVentSchedule": alwaysOn, "ScheduledVentilationSchedule": alwaysOn},
+        Name="VentilationSetting",
     ).save()
 
 
@@ -354,7 +363,9 @@ def struct(massratio):
     Args:
         massratio:
     """
-    return StructureInformation(MassRatio=[massratio]).save()
+    return StructureInformation(
+        MassRatios=[massratio], Name="StructureInformation"
+    ).save()
 
 
 @pytest.fixture()
@@ -370,14 +381,6 @@ def window(alwaysOn, windowconstruction):
             "Construction": windowconstruction,
             "ShadingSystemAvailabilitySchedule": alwaysOn,
             "ZoneMixingAvailabilitySchedule": alwaysOn,
-        }
+        },
+        Name="WindowSetting",
     ).save()
-
-
-def test_building_template(db):
-
-    """
-    Args:
-        db:
-    """
-    assert BuildingTemplate.objects
