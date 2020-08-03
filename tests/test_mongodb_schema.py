@@ -85,8 +85,8 @@ def test_serialize_templatelist(bldg, window, struct, core):
 
 @pytest.fixture(scope="session")
 def db():
-    connect("templatelibrary", host="mongomock://localhost")
-    # connect("templatelibrary")
+    # connect("templatelibrary", host="mongomock://localhost")
+    connect("templatelibrary")
     yield
     disconnect()
 
@@ -94,7 +94,9 @@ def db():
 @pytest.fixture(scope="session")
 def imported(db):
     path = "tests/test_templates/BostonTemplateLibrary.json"
-    import_umitemplate(path, Author="Carlos Cerezo", Country="US")
+    import_umitemplate(
+        path, Author="Carlos Cerezo", Country="US", YearFrom="1980", YearTo="2004"
+    )
 
 
 @pytest.fixture()

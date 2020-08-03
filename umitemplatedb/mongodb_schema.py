@@ -312,10 +312,10 @@ class BuildingTemplate(UmiBase):
     Country = StringField(
         choices=tuple((a.alpha_2, a.name) for a in list(pycountry.countries))
     )
-    YearFrom = StringField(
+    YearFrom = DateTimeField(
         help_text="Starting year for the range this template applies to"
     )
-    YearTo = StringField(help_text="End year ")
+    YearTo = DateTimeField(help_text="End year ")
     ClimateZone = StringField()
     Polygon = PolygonField(default=world_poly)
     Description = StringField(help_text="")
