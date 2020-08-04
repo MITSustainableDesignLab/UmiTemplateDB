@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="UmiTemplateDB",
+    name="umitemplatedb",
     version="",
     packages=["tests", "umitemplatedb"],
     url="",
