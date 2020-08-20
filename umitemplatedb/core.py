@@ -88,14 +88,6 @@ def import_umitemplate(
                 class_instance.save()
                 return class_instance
 
-        if not Polygon:
-            Polygon = {
-                "type": "Polygon",
-                "coordinates": [
-                    [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]]
-                ],
-            }
-
         # loop starts here
         bldg = recursive(
             bldgtemplate,

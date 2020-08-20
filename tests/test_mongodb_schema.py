@@ -49,18 +49,20 @@ def test_filter_by_geo(bldg):
 
     # First, a sanity check. We build a pt and use
     # the :meth:`intersects` method.
-    pt = Point(42.370145, -71.112077)
-    polygon = json.dumps(bldg.Polygon)
+    pt = Point(2, 46)  # Point inside France
+    polygon = json.dumps(bldg.Polygon or bldg.MultiPolygon)
     # Convert to geojson.geometry.Polygon
     g1 = geojson.loads(polygon)
     g2 = shapely.geometry.shape(g1)
     # Check if intersection is True
-    assert pt.intersects(g2)
+    assert pt.within(g2)
 
     # Second, the actual filter with point pt
     ptj = shapely.geometry.mapping(pt)
-    a_bldg = BuildingTemplate.objects(Polygon__geo_intersects=ptj).first()
-    assert a_bldg
+    retreived_bldgs = BuildingTemplate.objects(
+        Q(Polygon__geo_intersects=ptj) | Q(MultiPolygon__geo_intersects=ptj)
+    ).all()
+    assert all((bld.Country == "FRA" for bld in retreived_bldgs))
 
 
 def test_import_library(db, imported):
@@ -95,7 +97,7 @@ def db():
 def imported(db):
     path = "tests/test_templates/BostonTemplateLibrary.json"
     import_umitemplate(
-        path, Author="Carlos Cerezo", Country="US", YearFrom="1980", YearTo="2004"
+        path, Author="Carlos Cerezo", Country="USA", YearFrom="1980", YearTo="2004"
     )
 
 
@@ -115,7 +117,7 @@ def bldg(db, core, struct, window):
         Structure=struct,
         Windows=window,
         Author="Samuel Letellier-Duchesne",
-        Country="FR",
+        Country="FRA",
     ).save()
 
 

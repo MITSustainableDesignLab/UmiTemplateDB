@@ -5,3 +5,5 @@ pycountry
 pytest
 geojson
 mongomock
+datapackage
+geopandas

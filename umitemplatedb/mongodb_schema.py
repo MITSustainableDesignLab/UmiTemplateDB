@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import archetypal.template
+import geojson
 import pycountry
 from mongoengine import *
 
@@ -289,6 +290,11 @@ world_poly = {
 }
 
 
+def validate_poly(val):
+    if not val:
+        raise ValidationError("value can not be empty")
+
+
 def update_modified(sender, document):
     document.DateModified = datetime.utcnow()
 
@@ -310,15 +316,18 @@ class BuildingTemplate(UmiBase):
     DateModified = DateTimeField(default=datetime.utcnow)
     # Image = ImageField()
     Country = StringField(
-        choices=tuple((a.alpha_2, a.name) for a in list(pycountry.countries))
+        choices=tuple((a.alpha_3, a.name) for a in list(pycountry.countries))
     )
     YearFrom = DateTimeField(
         help_text="Starting year for the range this template applies to"
     )
     YearTo = DateTimeField(help_text="End year ")
     ClimateZone = StringField()
-    Polygon = PolygonField(default=world_poly)
+    Polygon = PolygonField()
+    MultiPolygon = MultiPolygonField()
     Description = StringField(help_text="")
+
+    _geo_countries = None
 
     def to_template(self, idf=None):
         """Converts to an :class:~`archetypal.template.building_template
@@ -352,3 +361,37 @@ class BuildingTemplate(UmiBase):
             idf = IDF()
 
         return recursive(self, idf=idf)
+
+    def save(self, *args, **kwargs):
+        if not self.Polygon and self.Country:
+            geometry = next(
+                filter(
+                    lambda x: x["properties"]["ISO_A3"] == self.Country,
+                    self.geo_countries.features,
+                ),
+                None,
+            )
+            if geometry:
+                geometry = geometry.geometry
+            if isinstance(geometry, geojson.MultiPolygon):
+                self.MultiPolygon = geometry
+            elif isinstance(geometry, geojson.Polygon):
+                self.Polygon = geometry
+            else:
+                raise TypeError(
+                    f"cannot import geometry of type '{type(geometry)}'. "
+                    f"Only 'Polygon' and 'MultiPolygon' are supported"
+                )
+        else:
+            self.Polygon = world_poly
+        return super(BuildingTemplate, self).save(*args, **kwargs)
+
+    @property
+    def geo_countries(self):
+        if self._geo_countries is None:
+            from datapackage import Package
+
+            package = Package("https://datahub.io/core/geo-countries/datapackage.json")
+            f = package.get_resource("countries").raw_read()
+            self._geo_countries = geojson.loads(f)
+        return self._geo_countries
