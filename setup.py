@@ -1,11 +1,10 @@
 import os
 
-import path
 from setuptools import setup
 
 here = os.getcwd()
 
-with open(path.join(here, "requirements.txt")) as f:
+with open(os.path.join(here, "requirements.txt")) as f:
     requirements_lines = f.readlines()
 install_requires = [r.strip() for r in requirements_lines]
 
