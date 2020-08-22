@@ -371,19 +371,17 @@ class BuildingTemplate(UmiBase):
                 ),
                 None,
             )
-            if geometry:
-                geometry = geometry.geometry
-            if isinstance(geometry, geojson.MultiPolygon):
-                self.MultiPolygon = geometry
-            elif isinstance(geometry, geojson.Polygon):
-                self.Polygon = geometry
-            else:
-                raise TypeError(
-                    f"cannot import geometry of type '{type(geometry)}'. "
-                    f"Only 'Polygon' and 'MultiPolygon' are supported"
-                )
-        else:
-            self.Polygon = world_poly
+            if geometry is not None:
+                geometry = geometry.geometry  # get actual geom
+                if isinstance(geometry, geojson.MultiPolygon):
+                    self.MultiPolygon = geometry  # set to MultiPolygon
+                elif isinstance(geometry, geojson.Polygon):
+                    self.Polygon = geometry  # set to Polygon
+                else:
+                    raise TypeError(
+                        f"cannot import geometry of type '{type(geometry)}'. "
+                        f"Only 'Polygon' and 'MultiPolygon' are supported"
+                    )
         return super(BuildingTemplate, self).save(*args, **kwargs)
 
     @property
