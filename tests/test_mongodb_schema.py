@@ -18,7 +18,7 @@ def test_save_and_retrieve_building(bldg, window, struct, core):
         struct:
         core:
     """
-    a_bldg = BuildingTemplate.objects(Country="FR").first()
+    a_bldg = BuildingTemplate.objects(Country="FRA").first()
     assert a_bldg.Name == bldg.Name
 
 
@@ -114,8 +114,8 @@ def bldg(db, core, struct, window):
         Perimeter=core,
         Structure=struct,
         Windows=window,
-        Author="Samuel Letellier-Duchesne",
-        Country="FRA",
+        Authors=["Samuel Letellier-Duchesne"],
+        Country=["FRA"],
     ).save()
 
 
@@ -192,6 +192,8 @@ def cond(alwaysOn):
             "CoolingSchedule": alwaysOn,
             "HeatingSchedule": alwaysOn,
             "MechVentSchedule": alwaysOn,
+            "CoolingFuelType": 0,
+            "HeatingFuelType": 0,
         },
         Name="Zone Conditioning",
     ).save()
