@@ -6,7 +6,7 @@ import pycountry
 from mongoengine import *
 
 
-class PrimaryKey(DictField):
+class PrimaryKey(IntField):
     def __init__(self, field=None, *args, **kwargs):
         super().__init__(field=field, *args, **kwargs)
 
@@ -24,7 +24,7 @@ class UmiBase(Document):
 
     Name = StringField(required=True)
     key = PrimaryKey(
-        primary_key=True, default=dict(_name=str(Name), _class=type(Document).__name__)
+        primary_key=True, default=hash((str(Name), Document.__name__))
     )
     Comments = StringField(null=True)
     DataSource = StringField(null=True)

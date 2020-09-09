@@ -65,9 +65,9 @@ def import_umitemplate(filename, **kwargs):
             else:
                 class_instance = class_(
                     **instance_attr,
-                    key=dict(
-                        _name=instance_attr.get("Name", id(umibase).__str__()),
-                        _class=type(umibase).__name__,
+                    key=hash(
+                        (instance_attr.get("Name", id(umibase).__str__()),
+                        type(umibase).__name__)
                     )
                 )
                 if isinstance(class_instance, BuildingTemplate):
