@@ -1,3 +1,5 @@
+from enum import Enum
+
 import archetypal
 from mongoengine import *
 
@@ -7,30 +9,14 @@ from umitemplatedb.mongodb_schema import (
 )
 
 
-def import_umitemplate(
-    filename,
-    Author=None,
-    Country=None,
-    YearFrom=None,
-    YearTo=None,
-    Polygon=None,
-    Description=None,
-):
+def import_umitemplate(filename, **kwargs):
     """Imports an UMI Template File to a mongodb client
 
     Args:
         filename (str or Path): PathLike object giving the pathname (absolute
                 or relative to the current working directory) of the UMI
                 Template File.
-        Author (str): The author of the template library. Saved in the dababase
-            metadata.
-        Country (str): The 2-letter country code. See pycountry.
-        YearFrom (str): Starting year for the range this template applies to. All
-            building templates are assumed to have the same YearFrom value.
-        YearTo (str): End year for the range this template applies to. All
-            building templates are assumed to have the same YearFrom value.
-        Polygon (shapely.polygon):
-        Description (str):
+        **kwargs: keyword arguments added to the BuildingTemplate class.
     """
     from archetypal import UmiTemplateLibrary
 
@@ -71,6 +57,8 @@ def import_umitemplate(
                             instance_attr[key].append(value)
                 elif isinstance(value, (str, int, float)):
                     instance_attr[key] = value
+                elif isinstance(value, Enum):
+                    instance_attr[key] = value.value
             class_instance = class_(**instance_attr)
             if isinstance(class_instance, EmbeddedDocument):
                 return class_instance
@@ -90,11 +78,5 @@ def import_umitemplate(
 
         # loop starts here
         bldg = recursive(
-            bldgtemplate,
-            Author=Author,
-            Country=Country,
-            YearFrom=YearFrom,
-            YearTo=YearTo,
-            Polygon=Polygon,
-            Description=Description,
+            bldgtemplate, **kwargs
         )

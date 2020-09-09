@@ -96,9 +96,7 @@ def db():
 @pytest.fixture(scope="session")
 def imported(db):
     path = "tests/test_templates/BostonTemplateLibrary.json"
-    import_umitemplate(
-        path, Author="Carlos Cerezo", Country="USA", YearFrom="1980", YearTo="2004"
-    )
+    import_umitemplate(path)
 
 
 @pytest.fixture()

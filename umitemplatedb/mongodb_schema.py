@@ -81,19 +81,15 @@ class OpaqueMaterial(Material):
             "Rough",
             "MediumRough",
             "MediumSmooth",
-            "Smooth VerySmooth",
+            "Smooth",
+            "VerySmooth",
         ],
     )
 
 
-def minimum_thickness(x):
-    if x <= 0.003:
-        print("Modeling layers thinner (less) than 0.003 m is not recommended")
-
-
 class MaterialLayer(EmbeddedDocument):
     Material = ReferenceField(Material, required=True)
-    Thickness = FloatField(validation=minimum_thickness, required=True)
+    Thickness = FloatField(required=True)
 
     meta = {"allow_inheritance": True, "strict": False}
 
@@ -110,17 +106,6 @@ class ConstructionBase(UmiBase):
 
 class OpaqueConstruction(ConstructionBase):
     Layers = EmbeddedDocumentListField(MaterialLayer)
-    Category = StringField(
-        choices=[
-            "Facade",
-            "Roof",
-            "Ground Floor",
-            "Interior Floor",
-            "Exterior Floor",
-            "Partition",
-            "ThermalMass",
-        ]
-    )
 
     meta = {"allow_inheritance": True}
 
@@ -205,9 +190,11 @@ class ZoneConditioning(UmiBase):
     CoolingCoeffOfPerf = FloatField()
     CoolingSetpoint = FloatField(default=26)
     CoolingLimitType = IntField()
+    CoolingFuelType = IntField(required=True)
     EconomizerType = IntField()
     HeatingCoeffOfPerf = FloatField()
     HeatingLimitType = IntField()
+    HeatingFuelType = IntField(required=True)
     HeatingSchedule = ReferenceField(YearSchedule, required=True)
     HeatingSetpoint = FloatField(default=20)
     HeatRecoveryEfficiencyLatent = FloatField(min_value=0, max_value=1, default=0.65)
@@ -277,7 +264,7 @@ class WindowSetting(UmiBase):
     ShadingSystemSetpoint = FloatField(default=180)
     ShadingSystemTransmittance = FloatField(default=0.5)
     ShadingSystemType = IntField()
-    Type = IntField(default=0)
+    Type = IntField()
     ZoneMixingAvailabilitySchedule = ReferenceField(YearSchedule, required=True)
     ZoneMixingDeltaTemperature = FloatField(default=2.0)
     ZoneMixingFlowRate = FloatField(default=0.001)
@@ -302,6 +289,9 @@ def update_modified(sender, document):
 class BuildingTemplate(UmiBase):
     """Top most object in Umi Template Structure"""
 
+    _geo_countries = None
+    _available_countries = tuple((a.alpha_3, a.name) for a in list(pycountry.countries))
+
     Core = ReferenceField(ZoneDefinition, required=True)
     Lifespan = IntField(default=60)
     PartitionRatio = FloatField(default=0)
@@ -310,24 +300,19 @@ class BuildingTemplate(UmiBase):
     Windows = ReferenceField(WindowSetting, required=True)
     DefaultWindowToWallRatio = FloatField(default=0.4, min_value=0, max_value=1)
 
-    # MetaData (Not in UMI)
-    Author = StringField(required=True)
+    # MetaData
+    Authors = ListField(StringField())
+    AuthorEmails = ListField(StringField())
     DateCreated = DateTimeField(default=datetime.utcnow, required=True)
     DateModified = DateTimeField(default=datetime.utcnow)
-    # Image = ImageField()
-    Country = StringField(
-        choices=tuple((a.alpha_3, a.name) for a in list(pycountry.countries))
-    )
-    YearFrom = DateTimeField(
-        help_text="Starting year for the range this template applies to"
-    )
-    YearTo = DateTimeField(help_text="End year ")
-    ClimateZone = StringField()
+    Country = ListField(StringField(choices=_available_countries))
+    YearFrom = IntField(help_text="Template starting year")
+    YearTo = IntField(help_text="End year")
+    ClimateZone = ListField(StringField())
     Polygon = PolygonField()
     MultiPolygon = MultiPolygonField()
-    Description = StringField(help_text="")
-
-    _geo_countries = None
+    Description = StringField()
+    Version = StringField()
 
     def to_template(self, idf=None):
         """Converts to an :class:~`archetypal.template.building_template
@@ -366,8 +351,8 @@ class BuildingTemplate(UmiBase):
         if not self.Polygon and self.Country:
             geometry = next(
                 filter(
-                    lambda x: x["properties"]["ISO_A3"] == self.Country,
-                    self.geo_countries.features,
+                    lambda x: x["properties"]["ISO_A3"] in self.Country,
+                    self.geo_countries,
                 ),
                 None,
             )
@@ -389,7 +374,12 @@ class BuildingTemplate(UmiBase):
         if self._geo_countries is None:
             from datapackage import Package
 
-            package = Package("https://datahub.io/core/geo-countries/datapackage.json")
-            f = package.get_resource("countries").raw_read()
-            self._geo_countries = geojson.loads(f)
+            try:
+                package = Package("https://datahub.io/core/geo-countries/datapackage"
+                                      ".json")
+            except:
+                self._geo_countries = []
+            else:
+                f = package.get_resource("countries").raw_read()
+                self._geo_countries = geojson.loads(f).features
         return self._geo_countries
