@@ -4,9 +4,7 @@ import archetypal
 from mongoengine import *
 
 from umitemplatedb import mongodb_schema
-from umitemplatedb.mongodb_schema import (
-    BuildingTemplate,
-)
+from umitemplatedb.mongodb_schema import BuildingTemplate
 
 
 def import_umitemplate(filename, **kwargs):
@@ -24,7 +22,7 @@ def import_umitemplate(filename, **kwargs):
     lib = UmiTemplateLibrary.read_file(filename)
 
     # Loop over building templates
-    for bldgtemplate in lib.__dict__["BuildingTemplates"]:
+    for bldgtemplate in lib.BuildingTemplates:
 
         def recursive(umibase, **metaattributes):
             """recursively create db objects from UmiBase objects. Start with
@@ -63,13 +61,7 @@ def import_umitemplate(filename, **kwargs):
             if isinstance(class_instance, EmbeddedDocument):
                 return class_instance
             else:
-                class_instance = class_(
-                    **instance_attr,
-                    key=hash(
-                        (instance_attr.get("Name", id(umibase).__str__()),
-                        type(umibase).__name__)
-                    )
-                )
+                class_instance = class_(**instance_attr,)
                 if isinstance(class_instance, BuildingTemplate):
                     for key, value in metaattributes.items():
                         class_instance[key] = value
@@ -77,6 +69,4 @@ def import_umitemplate(filename, **kwargs):
                 return class_instance
 
         # loop starts here
-        bldg = recursive(
-            bldgtemplate, **kwargs
-        )
+        recursive(bldgtemplate, **kwargs)

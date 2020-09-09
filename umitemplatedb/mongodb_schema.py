@@ -6,9 +6,11 @@ import pycountry
 from mongoengine import *
 
 
-class PrimaryKey(IntField):
-    def __init__(self, field=None, *args, **kwargs):
-        super().__init__(field=field, *args, **kwargs)
+class CompoundKey(EmbeddedDocument):
+    name = StringField(required=True)
+    clsname = StringField(required=True)
+
+    meta = {"allow_inheritance": True, "strict": False}
 
 
 class UmiBase(Document):
@@ -22,15 +24,18 @@ class UmiBase(Document):
 
     """
 
+    key = StringField(primary_key=True)
+
     Name = StringField(required=True)
-    key = PrimaryKey(
-        primary_key=True, default=hash((str(Name), Document.__name__))
-    )
     Comments = StringField(null=True)
     DataSource = StringField(null=True)
     Category = StringField(default="Uncategorized")
 
     meta = {"allow_inheritance": True}
+
+    def save(self, *args, **kwargs):
+        self.key = ", ".join([type(self).__name__, self.Name])
+        return super(UmiBase, self).save(*args, **kwargs)
 
 
 class Material(UmiBase):
@@ -277,15 +282,6 @@ world_poly = {
 }
 
 
-def validate_poly(val):
-    if not val:
-        raise ValidationError("value can not be empty")
-
-
-def update_modified(sender, document):
-    document.DateModified = datetime.utcnow()
-
-
 class BuildingTemplate(UmiBase):
     """Top most object in Umi Template Structure"""
 
@@ -375,8 +371,9 @@ class BuildingTemplate(UmiBase):
             from datapackage import Package
 
             try:
-                package = Package("https://datahub.io/core/geo-countries/datapackage"
-                                      ".json")
+                package = Package(
+                    "https://datahub.io/core/geo-countries/datapackage" ".json"
+                )
             except:
                 self._geo_countries = []
             else:

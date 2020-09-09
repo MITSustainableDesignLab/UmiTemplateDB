@@ -1,6 +1,5 @@
 import json
 
-import geojson
 import pytest
 import shapely.geometry
 from archetypal import UmiTemplateLibrary
@@ -72,6 +71,14 @@ def test_import_library(db, imported):
         assert bldg
 
 
+def test_serialize_db(imported):
+    bldgs = BuildingTemplate.objects().all()
+    templates = []
+    for bldg in bldgs:
+        templates.append(bldg.to_template())
+    lib = UmiTemplateLibrary(BuildingTemplates=templates).to_json()
+
+
 def test_serialize_templatelist(bldg, window, struct, core):
     """From a list of :class:~`umitemplatedb.mongodb_schema.BuildingTemplate`
     create an :class:~`archetypal.umi_template.UmiTemplateLibrary`"""
@@ -82,7 +89,7 @@ def test_serialize_templatelist(bldg, window, struct, core):
         templates.append(bldg.to_template())
 
     lib = UmiTemplateLibrary(BuildingTemplates=templates)
-    lib.to_json()
+    print(lib.to_json())
 
 
 @pytest.fixture(scope="session")
@@ -95,6 +102,8 @@ def db():
 
 @pytest.fixture(scope="session")
 def imported(db):
+    UmiBase.drop_collection()
+
     path = "tests/test_templates/BostonTemplateLibrary.json"
     import_umitemplate(path)
 
