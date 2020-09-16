@@ -282,6 +282,14 @@ world_poly = {
 }
 
 
+class ClimateZone(Document):
+    """A class to store climate zone geometries"""
+
+    CZ = StringField()
+    ISO3_CODE = StringField()
+    geometry = MultiPolygonField()
+
+
 class BuildingTemplate(UmiBase):
     """Top most object in Umi Template Structure"""
 
