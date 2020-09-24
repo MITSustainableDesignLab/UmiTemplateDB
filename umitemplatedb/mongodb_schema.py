@@ -287,7 +287,7 @@ class ClimateZone(Document):
 
     CZ = StringField()
     ISO3_CODE = StringField()
-    geometry = MultiPolygonField()
+    geometry = PolygonField()
 
 
 class BuildingTemplate(UmiBase):
