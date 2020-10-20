@@ -1,7 +1,7 @@
 from enum import Enum
 
 import archetypal
-from mongoengine import *
+from mongoengine import EmbeddedDocument
 
 from umitemplatedb import mongodb_schema
 from umitemplatedb.mongodb_schema import BuildingTemplate
@@ -61,7 +61,9 @@ def import_umitemplate(filename, **kwargs):
             if isinstance(class_instance, EmbeddedDocument):
                 return class_instance
             else:
-                class_instance = class_(**instance_attr,)
+                class_instance = class_(
+                    **instance_attr,
+                )
                 if isinstance(class_instance, BuildingTemplate):
                     for key, value in metaattributes.items():
                         class_instance[key] = value

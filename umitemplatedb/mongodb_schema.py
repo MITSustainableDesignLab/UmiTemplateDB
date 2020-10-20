@@ -3,7 +3,21 @@ from datetime import datetime
 import archetypal.template
 import geojson
 import pycountry
-from mongoengine import *
+from mongoengine import (
+    BooleanField,
+    DateTimeField,
+    Document,
+    EmbeddedDocument,
+    EmbeddedDocumentListField,
+    FloatField,
+    IntField,
+    ListField,
+    MultiPolygonField,
+    PolygonField,
+    ReferenceField,
+    StringField,
+    ValidationError,
+)
 
 
 class CompoundKey(EmbeddedDocument):
@@ -145,7 +159,9 @@ def min_length(x):
 
 
 class WeekSchedule(UmiBase):
-    Days = ListField(ReferenceField(DaySchedule), validation=min_length, required=True)
+    Days = ListField(
+        ReferenceField(DaySchedule), validation=min_length, required=True
+    )
     Type = StringField(default="Fraction")
 
 
@@ -202,8 +218,12 @@ class ZoneConditioning(UmiBase):
     HeatingFuelType = IntField(required=True)
     HeatingSchedule = ReferenceField(YearSchedule, required=True)
     HeatingSetpoint = FloatField(default=20)
-    HeatRecoveryEfficiencyLatent = FloatField(min_value=0, max_value=1, default=0.65)
-    HeatRecoveryEfficiencySensible = FloatField(min_value=0, max_value=1, default=0.7)
+    HeatRecoveryEfficiencyLatent = FloatField(
+        min_value=0, max_value=1, default=0.65
+    )
+    HeatRecoveryEfficiencySensible = FloatField(
+        min_value=0, max_value=1, default=0.7
+    )
     HeatRecoveryType = IntField()
     IsCoolingOn = BooleanField(default=True)
     IsHeatingOn = BooleanField(default=True)
@@ -250,7 +270,9 @@ class ZoneDefinition(UmiBase):
     DaylightMeshResolution = FloatField(default=1)
     DaylightWorkplaneHeight = FloatField(default=0.8)
     DomesticHotWater = ReferenceField(DomesticHotWaterSetting, required=True)
-    InternalMassConstruction = ReferenceField(OpaqueConstruction, required=True)
+    InternalMassConstruction = ReferenceField(
+        OpaqueConstruction, required=True
+    )
     InternalMassExposedPerFloorArea = FloatField()
     Loads = ReferenceField(ZoneLoad, required=True)
     Ventilation = ReferenceField(VentilationSetting, required=True)
@@ -265,20 +287,27 @@ class WindowSetting(UmiBase):
     IsVirtualPartition = BooleanField()
     IsZoneMixingOn = BooleanField()
     OperableArea = FloatField(default=0.8, min_value=0, max_value=1)
-    ShadingSystemAvailabilitySchedule = ReferenceField(YearSchedule, required=True)
+    ShadingSystemAvailabilitySchedule = ReferenceField(
+        YearSchedule, required=True
+    )
     ShadingSystemSetpoint = FloatField(default=180)
     ShadingSystemTransmittance = FloatField(default=0.5)
     ShadingSystemType = IntField()
     Type = IntField()
-    ZoneMixingAvailabilitySchedule = ReferenceField(YearSchedule, required=True)
+    ZoneMixingAvailabilitySchedule = ReferenceField(
+        YearSchedule, required=True
+    )
     ZoneMixingDeltaTemperature = FloatField(default=2.0)
     ZoneMixingFlowRate = FloatField(default=0.001)
 
 
-# A Bounding box for the whole world. Used as the default Polygon for BuildingTemplates.
+# A Bounding box for the whole world. Used as the default Polygon
+# for BuildingTemplates.
 world_poly = {
     "type": "Polygon",
-    "coordinates": [[[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]]],
+    "coordinates": [
+        [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]]
+    ],
 }
 
 
@@ -294,7 +323,9 @@ class BuildingTemplate(UmiBase):
     """Top most object in Umi Template Structure"""
 
     _geo_countries = None
-    _available_countries = tuple((a.alpha_3, a.name) for a in list(pycountry.countries))
+    _available_countries = tuple(
+        (a.alpha_3, a.name) for a in list(pycountry.countries)
+    )
 
     Core = ReferenceField(ZoneDefinition, required=True)
     Lifespan = IntField(default=60)
@@ -302,7 +333,9 @@ class BuildingTemplate(UmiBase):
     Perimeter = ReferenceField(ZoneDefinition, required=True)
     Structure = ReferenceField(StructureInformation, required=True)
     Windows = ReferenceField(WindowSetting, required=True)
-    DefaultWindowToWallRatio = FloatField(default=0.4, min_value=0, max_value=1)
+    DefaultWindowToWallRatio = FloatField(
+        default=0.4, min_value=0, max_value=1
+    )
 
     # MetaData
     Authors = ListField(StringField())
@@ -334,7 +367,13 @@ class BuildingTemplate(UmiBase):
                     instance_attr[key] = []
                     for value in document[key]:
                         if isinstance(
-                            value, (UmiBase, YearSchedulePart, MaterialLayer, MassRatio)
+                            value,
+                            (
+                                UmiBase,
+                                YearSchedulePart,
+                                MaterialLayer,
+                                MassRatio,
+                            ),
                         ):
                             instance_attr[key].append(recursive(value, idf))
                         else:
@@ -382,7 +421,7 @@ class BuildingTemplate(UmiBase):
                 package = Package(
                     "https://datahub.io/core/geo-countries/datapackage" ".json"
                 )
-            except:
+            except Exception:
                 self._geo_countries = []
             else:
                 f = package.get_resource("countries").raw_read()
