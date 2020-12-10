@@ -1,11 +1,13 @@
+import logging
 from enum import Enum
 
-import archetypal
 from mongoengine import EmbeddedDocument
 
+import archetypal
 from umitemplatedb import mongodb_schema
 from umitemplatedb.mongodb_schema import BuildingTemplate
 
+log = logging.getLogger(__name__)
 
 def import_umitemplate(filename, **kwargs):
     """Imports an UMI Template File to a mongodb client
