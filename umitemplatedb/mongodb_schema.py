@@ -62,42 +62,83 @@ class CompoundKey(EmbeddedDocument):
 
 
 class UmiBase(Document):
-    """The Base class of all Umi objects.
-
-    Attributes:
-        Comments (StringField): Human readable string describing the exception.
-        DataSource (StringField): Error code.
-        Name (StringField): The Name of the Component. Required Field
-        Category (StringField):
-
-    """
+    """The Base class of all Umi objects."""
 
     key = StringField(primary_key=True)
 
-    Name = StringField(required=True)
-    Comments = StringField(null=True)
-    DataSource = StringField(null=True)
-    Category = StringField(default="Uncategorized")
+    Name = StringField(required=True, help_text="The name of the component")
+    Comments = StringField(null=True, help_text="User-defined comments")
+    DataSource = StringField(
+        null=True, help_text="A reference to the source of the component"
+    )
+    Category = StringField(default="Uncategorized", help_text="")
 
     meta = {"allow_inheritance": True}
 
     def save(self, *args, **kwargs):
+        """Little hack modifies the key to use a combination of class name and Name."""
         self.key = ", ".join([type(self).__name__, self.Name])
         return super(UmiBase, self).save(*args, **kwargs)
 
 
 class Material(UmiBase):
-    # MaterialBase
-    Cost = FloatField(default=0.0)
-    EmbodiedCarbon = FloatField(default=0.0)
-    EmbodiedEnergy = FloatField(default=0.0)
-    SubstitutionTimestep = FloatField(default=100)
-    TransportCarbon = FloatField(default=0.0)
-    TransportDistance = FloatField(default=0.0)
-    TransportEnergy = FloatField(default=0.0)
-    SubstitutionRatePattern = ListField(default=[])
-    Conductivity = FloatField(default=0)
-    Density = FloatField(default=2500)
+    """MaterialBase."""
+
+    Cost = FloatField(default=0.0, units=None)
+    EmbodiedCarbon = FloatField(default=0.0, units="kgCO2/kg")
+    EmbodiedEnergy = FloatField(default=0.0, units="MJ/kg")
+    SubstitutionTimestep = FloatField(
+        default=100,
+        units="year",
+        help_text="The duration in years of a period of replacement (e.g. There will "
+        "be interventions in this material type every 10 years)",
+    )
+    SubstitutionRatePattern = ListField(
+        default=[],
+        units="dimensionless",
+        help_text="a ratio from 0 to 1 which defines the amount of the material "
+        "replaced at the end of each period of replacement (e.g. Every 10 "
+        "years this cladding will be completely replaced with ratio 1)",
+        long_help_text="Notice that you can define different replacement ratios for "
+        "different consecutive periods, introducing them separated by "
+        "commas. For example, if you introduce the series “[0.1 , 0.1 , "
+        "1]” after the first 10 years (SubstitutionTimestep) 10% will "
+        "be replaced, then after 20 years another 10%, then after 30 "
+        "years 100%, and finally the series would start again in year "
+        "40.",
+    )
+    TransportCarbon = FloatField(
+        default=0.0,
+        units="kgCO2/kg/km",
+        help_text="Impacts associated with the transport by km of distance and kg of "
+        "material",
+    )
+    TransportDistance = FloatField(
+        default=0.0,
+        units="km",
+        help_text="The average distance in km from the manufacturing site to the "
+        "building construction site",
+        long_help_text="These values are typically defined by vehicle (Truck, Train, "
+        "Boat, etc.) and size and can be found in fuel efficiency "
+        "publications.",
+    )
+    TransportEnergy = FloatField(
+        default=0.0,
+        units="kgCO2/kg/km",
+        help_text="Impacts associated with the transport by km of distance and kg of "
+        "material",
+        long_help_text="These values are typically defined by vehicle (Truck, Train, "
+        "Boat, etc.) and size and can be found in fuel efficiency "
+        "publications.",
+    )
+    Conductivity = FloatField(
+        default=0,
+        units="W/(m K)",
+        help_text="The quantity of heat transmitted through a unit thickness of a "
+        "material - in a direction normal to a surface of unit area - due to a unit "
+        "temperature gradient under steady state conditions",
+    )
+    Density = FloatField(default=2500, units="kg/m³", help_text="Mass per unit volume.")
 
 
 class GasMaterial(Material):
@@ -107,16 +148,16 @@ class GasMaterial(Material):
 
 
 class GlazingMaterial(Material):
-    SolarTransmittance = FloatField(default=0)
-    SolarReflectanceFront = FloatField(default=0)
-    SolarReflectanceBack = FloatField(default=0)
-    VisibleTransmittance = FloatField(default=0)
-    VisibleReflectanceFront = FloatField(default=0)
-    VisibleReflectanceBack = FloatField(default=0)
-    IRTransmittance = FloatField(default=0)
-    IREmissivityFront = FloatField(default=0)
-    IREmissivityBack = FloatField(default=0)
-    DirtFactor = FloatField(default=1.0)
+    SolarTransmittance = FloatField(default=0, units=None)
+    SolarReflectanceFront = FloatField(default=0, units=None)
+    SolarReflectanceBack = FloatField(default=0, units=None)
+    VisibleTransmittance = FloatField(default=0, units=None)
+    VisibleReflectanceFront = FloatField(default=0, units=None)
+    VisibleReflectanceBack = FloatField(default=0, units=None)
+    IRTransmittance = FloatField(default=0, units=None)
+    IREmissivityFront = FloatField(default=0, units=None)
+    IREmissivityBack = FloatField(default=0, units=None)
+    DirtFactor = FloatField(default=1.0, units=None)
     Type = StringField()
     Life = FloatField(default=1)
 
@@ -187,7 +228,7 @@ class DaySchedule(UmiBase):
 
 
 def min_length(x):
-    """WeekSchedule.Days should have lenght == 7"""
+    """WeekSchedule.Days should have length == 7"""
     if len(x) != 7:
         raise ValidationError
 
@@ -384,12 +425,7 @@ class BuildingTemplate(UmiBase):
                     for value in document[key]:
                         if isinstance(
                             value,
-                            (
-                                UmiBase,
-                                YearSchedulePart,
-                                MaterialLayer,
-                                MassRatio,
-                            ),
+                            (UmiBase, YearSchedulePart, MaterialLayer, MassRatio,),
                         ):
                             instance_attr[key].append(recursive(value, idf))
                         else:
