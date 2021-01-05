@@ -9,6 +9,7 @@ from umitemplatedb.mongodb_schema import BuildingTemplate
 
 log = logging.getLogger(__name__)
 
+
 def import_umitemplate(filename, **kwargs):
     """Imports an UMI Template File to a mongodb client
 
@@ -63,9 +64,7 @@ def import_umitemplate(filename, **kwargs):
             if isinstance(class_instance, EmbeddedDocument):
                 return class_instance
             else:
-                class_instance = class_(
-                    **instance_attr,
-                )
+                class_instance = class_(**instance_attr,)
                 if isinstance(class_instance, BuildingTemplate):
                     for key, value in metaattributes.items():
                         class_instance[key] = value

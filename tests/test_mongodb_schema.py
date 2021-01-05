@@ -3,6 +3,7 @@ import json
 import pytest
 import shapely.geometry
 from archetypal import UmiTemplateLibrary
+from mongoengine import connect, disconnect, Q
 
 from umitemplatedb.core import import_umitemplate
 from umitemplatedb.mongodb_schema import *
@@ -106,5 +107,3 @@ def imported(db):
 
     path = "tests/test_templates/BostonTemplateLibrary.json"
     import_umitemplate(path)
-
-

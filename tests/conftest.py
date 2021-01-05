@@ -1,11 +1,27 @@
 import pytest
 
-from umitemplatedb import BuildingTemplate, DaySchedule, WeekSchedule, \
-    YearSchedulePart, \
-    YearSchedule, ZoneConditioning, OpaqueMaterial, GlazingMaterial, MaterialLayer, \
-    OpaqueConstruction, GasMaterial, WindowConstruction, DomesticHotWaterSetting, \
-    ZoneConstructionSet, ZoneLoad, VentilationSetting, ZoneDefinition, MassRatio, \
-    StructureInformation, WindowSetting
+from umitemplatedb.mongodb_schema import (
+    BuildingTemplate,
+    DaySchedule,
+    WeekSchedule,
+    YearSchedulePart,
+    YearSchedule,
+    ZoneConditioning,
+    OpaqueMaterial,
+    GlazingMaterial,
+    MaterialLayer,
+    OpaqueConstruction,
+    GasMaterial,
+    WindowConstruction,
+    DomesticHotWaterSetting,
+    ZoneConstructionSet,
+    ZoneLoad,
+    VentilationSetting,
+    ZoneDefinition,
+    MassRatio,
+    StructureInformation,
+    WindowSetting,
+)
 
 
 @pytest.fixture()
