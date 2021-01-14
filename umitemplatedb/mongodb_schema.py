@@ -367,18 +367,28 @@ class BuildingTemplate(UmiBase):
     Description = StringField()
     Version = StringField()
 
-    def to_template(self, idf=None):
+    def to_template(self, idf=None, bar=None):
         """Converts to an :class:~`archetypal.template.building_template
-        .BuildingTemplate` object"""
+        .BuildingTemplate` object.
 
-        def recursive(document, idf):
+        Args:
+            idf (IDF): Optional, an IDF object.
+            bar (tqdm): A tqdm progress bar, optional.
+
+        Returns:
+            (archetypal.template.BuildingTemplate): The BuildingTemplate object.
+        """
+
+        def recursive(document, idf, bar):
             """recursively create UmiBase objects from Document objects. Start with
             BuildingTemplates."""
+            if bar is not None:
+                bar.update(1)
             instance_attr = {}
             class_ = getattr(archetypal.template, type(document).__name__)
             for key in document:
                 if isinstance(document[key], (UmiBase, YearSchedulePart)):
-                    instance_attr[key] = recursive(document[key], idf)
+                    instance_attr[key] = recursive(document[key], idf, bar)
                 elif isinstance(document[key], list):
                     instance_attr[key] = []
                     for value in document[key]:
@@ -391,7 +401,7 @@ class BuildingTemplate(UmiBase):
                                 MassRatio,
                             ),
                         ):
-                            instance_attr[key].append(recursive(value, idf))
+                            instance_attr[key].append(recursive(value, idf, bar))
                         else:
                             instance_attr[key].append(value)
                 elif isinstance(document[key], (str, int, float)):
@@ -403,8 +413,7 @@ class BuildingTemplate(UmiBase):
             from archetypal import IDF
 
             idf = IDF()
-
-        return recursive(self, idf=idf)
+        return recursive(self, idf=idf, bar=bar)
 
     def save(self, *args, **kwargs):
         if not self.Polygon and self.Country:
