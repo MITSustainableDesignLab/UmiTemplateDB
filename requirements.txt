@@ -1,4 +1,4 @@
-archetypal
+git+https://github.com/samuelduchesne/archetypal.git#archetypal=archetypal
 numpy
 mongoengine
 pycountry
