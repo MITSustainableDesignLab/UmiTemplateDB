@@ -50,8 +50,8 @@ class CommandLogger(monitoring.CommandListener):
             "microseconds".format(event)
         )
 
-
-monitoring.register(CommandLogger())
+# Uncomment next line to register the logger
+# monitoring.register(CommandLogger())
 
 
 class CompoundKey(EmbeddedDocument):
