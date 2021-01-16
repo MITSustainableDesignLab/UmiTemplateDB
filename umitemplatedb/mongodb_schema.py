@@ -23,7 +23,6 @@ from pymongo import monitoring
 import archetypal.template
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 
 class CommandLogger(monitoring.CommandListener):
@@ -394,12 +393,7 @@ class BuildingTemplate(UmiBase):
                     for value in document[key]:
                         if isinstance(
                             value,
-                            (
-                                UmiBase,
-                                YearSchedulePart,
-                                MaterialLayer,
-                                MassRatio,
-                            ),
+                            (UmiBase, YearSchedulePart, MaterialLayer, MassRatio,),
                         ):
                             instance_attr[key].append(recursive(value, idf, bar))
                         else:
@@ -439,16 +433,21 @@ class BuildingTemplate(UmiBase):
 
     @property
     def geo_countries(self):
-        if self._geo_countries is None:
+        if BuildingTemplate._geo_countries is None:
             from datapackage import Package
 
             try:
                 package = Package(
-                    "https://datahub.io/core/geo-countries/datapackage" ".json"
+                    "https://datahub.io/core/geo-countries/datapackage.json"
                 )
-            except Exception:
-                self._geo_countries = []
+            except Exception as e:
+                log.error(
+                    "An error occurred while loading country polygons from datahub.io",
+                    exc_info=e,
+                )
+                BuildingTemplate._geo_countries = []
             else:
                 f = package.get_resource("countries").raw_read()
-                self._geo_countries = geojson.loads(f).features
+                BuildingTemplate._geo_countries = geojson.loads(f).features
+                log.info("Country Polygons loaded from datahub.io")
         return self._geo_countries
