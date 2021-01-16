@@ -2,6 +2,7 @@ import logging
 from enum import Enum
 
 from mongoengine import EmbeddedDocument
+from tqdm import tqdm
 
 import archetypal
 from umitemplatedb import mongodb_schema
@@ -25,7 +26,7 @@ def import_umitemplate(filename, **kwargs):
     lib = UmiTemplateLibrary.read_file(filename)
 
     # Loop over building templates
-    for bldgtemplate in lib.BuildingTemplates:
+    for bldgtemplate in tqdm(lib.BuildingTemplates, desc="importing templates"):
 
         def recursive(umibase, **metaattributes):
             """recursively create db objects from UmiBase objects. Start with
@@ -64,7 +65,9 @@ def import_umitemplate(filename, **kwargs):
             if isinstance(class_instance, EmbeddedDocument):
                 return class_instance
             else:
-                class_instance = class_(**instance_attr,)
+                class_instance = class_(
+                    **instance_attr,
+                )
                 if isinstance(class_instance, BuildingTemplate):
                     for key, value in metaattributes.items():
                         class_instance[key] = value
