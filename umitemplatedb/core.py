@@ -23,7 +23,7 @@ def import_umitemplate(filename, **kwargs):
     from archetypal import UmiTemplateLibrary
 
     # first, load the umitemplatelibrary
-    lib = UmiTemplateLibrary.read_file(filename)
+    lib = UmiTemplateLibrary.open(filename)
 
     # Loop over building templates
     for bldgtemplate in tqdm(lib.BuildingTemplates, desc="importing templates"):
