@@ -101,7 +101,7 @@ class Material(UmiBase):
 
 class GasMaterial(Material):
     GasType = IntField(0, choices=(0, 1, 2))
-    Type = StringField(default="Gas")
+    Type = StringField(default="Air")
     Life = FloatField(default=1)
 
 
