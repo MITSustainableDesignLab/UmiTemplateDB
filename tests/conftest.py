@@ -21,6 +21,7 @@ from umitemplatedb.mongodb_schema import (
     MassRatio,
     StructureInformation,
     WindowSetting,
+    GasLayer,
 )
 
 
@@ -172,7 +173,7 @@ def airlayer(air):
     Args:
         air:
     """
-    return MaterialLayer(Material=air, Thickness=0.01)
+    return GasLayer(Material=air, Thickness=0.01)
 
 
 @pytest.fixture()
@@ -183,7 +184,9 @@ def windowconstruction(windowlayer, airlayer):
         airlayer:
     """
     return WindowConstruction(
-        Name="A Window Construction", Layers=[windowlayer, airlayer, windowlayer]
+        Name="A Window Construction",
+        Layers=[windowlayer, airlayer, windowlayer],
+        Category="double",
     ).save()
 
 
@@ -217,8 +220,8 @@ def conset(construction):
 
 
 @pytest.fixture()
-def intmass():
-    return OpaqueConstruction(Name="OpaqueConstruction").save()
+def intmass(materiallayer):
+    return OpaqueConstruction(Name="InternalMass", Layers=[materiallayer]).save()
 
 
 @pytest.fixture()

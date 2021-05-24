@@ -49,6 +49,7 @@ class CommandLogger(monitoring.CommandListener):
             "microseconds".format(event)
         )
 
+
 # Uncomment next line to register the logger
 # monitoring.register(CommandLogger())
 
@@ -121,7 +122,7 @@ class GlazingMaterial(Material):
 
 
 class OpaqueMaterial(Material):
-    SpecificHeat = FloatField(default=0)
+    SpecificHeat = FloatField(default=100, min_value=100)
     SolarAbsorptance = FloatField(default=0.7)
     ThermalEmittance = FloatField(default=0.9)
     VisibleAbsorptance = FloatField(default=0.7)
@@ -139,8 +140,23 @@ class OpaqueMaterial(Material):
     )
 
 
-class MaterialLayer(EmbeddedDocument):
+class _Layer(EmbeddedDocument):
+    """Parent class of MaterialLayer & GasLayer to use in EmbeddedDocumentListField."""
+
+    pass
+
+    meta = {"allow_inheritance": True}
+
+
+class MaterialLayer(_Layer):
     Material = ReferenceField(Material, required=True)
+    Thickness = FloatField(required=True)
+
+    meta = {"allow_inheritance": True, "strict": False}
+
+
+class GasLayer(_Layer):
+    Material = ReferenceField(GasMaterial, required=True)
     Thickness = FloatField(required=True)
 
     meta = {"allow_inheritance": True, "strict": False}
@@ -157,13 +173,13 @@ class ConstructionBase(UmiBase):
 
 
 class OpaqueConstruction(ConstructionBase):
-    Layers = EmbeddedDocumentListField(MaterialLayer)
+    Layers = EmbeddedDocumentListField(_Layer)
 
     meta = {"allow_inheritance": True}
 
 
 class WindowConstruction(ConstructionBase):
-    Layers = EmbeddedDocumentListField(MaterialLayer)
+    Layers = EmbeddedDocumentListField(_Layer)
 
 
 class MassRatio(EmbeddedDocument):
@@ -302,6 +318,15 @@ class ZoneDefinition(UmiBase):
     Loads = ReferenceField(ZoneLoad, required=True)
     Ventilation = ReferenceField(VentilationSetting, required=True)
 
+    zone_surfaces = ListField()
+    is_part_of_conditioned_floor_area = BooleanField(default=True)
+    volume = FloatField()
+    multiplier = IntField(min_value=1)
+    occupants = FloatField()
+    is_part_of_total_floor_area = BooleanField(default=True)
+    area = FloatField()
+    is_core = BooleanField()
+
 
 class WindowSetting(UmiBase):
     AfnDischargeC = FloatField(default=0.65, min_value=0, max_value=1)
@@ -393,7 +418,13 @@ class BuildingTemplate(UmiBase):
                     for value in document[key]:
                         if isinstance(
                             value,
-                            (UmiBase, YearSchedulePart, MaterialLayer, MassRatio,),
+                            (
+                                UmiBase,
+                                YearSchedulePart,
+                                MaterialLayer,
+                                GasLayer,
+                                MassRatio,
+                            ),
                         ):
                             instance_attr[key].append(recursive(value, idf, bar))
                         else:
