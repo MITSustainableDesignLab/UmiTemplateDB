@@ -17,8 +17,19 @@ jobs:
       matrix:
         python-version: [3.7, 3.8]
         os: [ubuntu-latest]
+        energyplus-version: [ 9.2.0 ]  # later, add 9.4.0
+        include:
+          - energyplus-version: 9.2.0
+            energyplus-sha: 921312fa1d
+            energyplus-install: 9-2-0
 
     steps:
+    - name: Install EnergyPlus
+      env:
+        ENERGYPLUS_VERSION: ${{ matrix.energyplus-version }}
+        ENERGYPLUS_SHA: ${{ matrix.energyplus-sha }}
+        ENERGYPLUS_INSTALL_VERSION: ${{ matrix.energyplus-install }}
+      run: bash ./install_energyplus.sh
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
