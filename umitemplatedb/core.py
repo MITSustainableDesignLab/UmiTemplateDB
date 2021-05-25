@@ -1,6 +1,7 @@
 import logging
 from enum import Enum
 
+from archetypal.umi_template import traverse
 from mongoengine import EmbeddedDocument
 from tqdm import tqdm
 
@@ -37,7 +38,7 @@ def import_umitemplate(filename, **kwargs):
                 if isinstance(
                     value,
                     (
-                        archetypal.template.UmiBase,
+                        archetypal.template.umi_base.UmiBase,
                         archetypal.template.schedule.YearSchedulePart,
                     ),
                 ):
@@ -48,10 +49,11 @@ def import_umitemplate(filename, **kwargs):
                         if isinstance(
                             value,
                             (
-                                archetypal.template.UmiBase,
+                                archetypal.template.umi_base.UmiBase,
                                 archetypal.template.schedule.YearSchedulePart,
-                                archetypal.template.MaterialLayer,
-                                archetypal.template.MassRatio,
+                                archetypal.template.materials.material_layer.MaterialLayer,
+                                archetypal.template.materials.gas_layer.GasLayer,
+                                archetypal.template.structure.MassRatio,
                             ),
                         ):
                             instance_attr[key].append(recursive(value))
