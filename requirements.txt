@@ -3,5 +3,5 @@ mongoengine~=0.20.0
 pycountry~=20.7.3
 pytest~=6.2.4
 geojson~=2.5.0
-mongomock~=3.21.0
+mongomock~=3.22.1
 datapackage~=1.15.2
