@@ -1,6 +1,6 @@
 archetypal==2.2.6
 mongoengine~=0.23.1
-pycountry~=20.7.3
+pycountry~=22.3.5
 pytest~=6.2.4
 geojson~=2.5.0
 mongomock~=3.22.1
