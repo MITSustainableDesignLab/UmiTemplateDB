@@ -1,4 +1,4 @@
-archetypal==2.2.6
+archetypal==2.14.2
 mongoengine~=0.23.1
 pycountry~=20.7.3
 pytest~=6.2.4
