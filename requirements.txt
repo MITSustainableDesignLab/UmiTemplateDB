@@ -1,5 +1,5 @@
 archetypal==2.2.6
-mongoengine~=0.23.1
+mongoengine~=0.26.0
 pycountry~=20.7.3
 pytest~=6.2.4
 geojson~=2.5.0
